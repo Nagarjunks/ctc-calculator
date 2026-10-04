@@ -149,9 +149,32 @@ const TAX = {
   .empRow{display:flex;gap:8px;align-items:flex-end}
   .empRow .f{flex:1;min-width:0}
   .iconBtn{height:48px;width:48px;padding:0;flex:none;margin-bottom:12px}
+  .missing{display:none;align-items:center;gap:10px;justify-content:space-between;background:var(--accent-soft);border-radius:10px;padding:8px 8px 8px 12px;font-size:12.5px;color:var(--ink);margin:-2px 0 12px}
+  .missing.on{display:flex}
+  .importBtn{width:100%;margin:0 0 12px}
+  .src{font-size:11px;font-weight:600;color:var(--accent)}
+  .drop{border:2px dashed var(--line);border-radius:12px;padding:22px 14px;text-align:center;color:var(--muted);font-size:14px;cursor:pointer}
+  .drop b{color:var(--accent)}
+  .ptable{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:10px}
+  .ptable th{text-align:left;font-size:12px;color:var(--muted);font-weight:500;padding:6px 4px;border-bottom:1px solid var(--line)}
+  .ptable td{padding:7px 4px;border-bottom:1px solid var(--line)}
+  .ptable td.n,.ptable th.n{text-align:right;font-variant-numeric:tabular-nums}
+  .ptable tr.bad td{color:#c0392b}
+  .chg{color:var(--accent);font-weight:600}
+  .note{background:var(--field);border-radius:10px;padding:10px 12px;font-size:13px;margin-top:10px}
+  .missing button{height:32px;font-size:12.5px;padding:0 12px;flex:none}
+  .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:#fff1d6;color:#7a5200;margin-left:6px}
+  @media (prefers-color-scheme: dark){ .tag{background:#3a2e12;color:#f3d48c} }
+  .f.need input,.f.need select{border-color:#e0a84a}
   .banner{display:none;background:#fff6e0;color:#6b4a00;border:1px solid #f1d38a;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:12px}
   .banner.on{display:block}
-  .banner button{height:32px;font-size:13px;padding:0 12px;margin-top:8px}
+  .banner button{height:32px;font-size:13px;padding:0 12px;margin-top:8px;margin-right:6px}
+  .banner.info{background:var(--accent-soft);color:var(--ink);border-color:transparent}
+  .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);background:#1d2533;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:20;white-space:nowrap}
+  .toast.on{opacity:1;transform:translateX(-50%)}
+  @media(min-width:1000px){ .toast{bottom:24px} }
+  .steps{margin:0 0 14px;padding-left:20px;font-size:13.5px;line-height:1.6}
+  .syncBox{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;margin-top:14px}
   @media (prefers-color-scheme: dark){ .banner{background:#2d2410;color:#f3d48c;border-color:#5a4718} }
   dialog{border:0;padding:0;border-radius:16px;width:min(680px,calc(100vw - 24px));max-height:calc(100dvh - 24px);background:var(--surface);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35)}
   dialog::backdrop{background:rgba(10,14,22,.55)}
@@ -211,8 +234,8 @@ const TAX = {
     <img id="lockLogo" alt="">
     <h1 id="lockName"></h1>
     <p>Enter the password to open payroll</p>
-    <input type="text" name="username" value="payroll" autocomplete="username" hidden>
-    <input id="pw" type="password" autocomplete="current-password" placeholder="Password" required>
+        <div style="position:relative"><input id="pw" type="password" autocomplete="off" placeholder="Password" required style="padding:0 48px">
+    <button type="button" id="pwEye" aria-label="Show password" style="position:absolute;right:4px;top:4px;height:40px;width:44px;padding:0;background:transparent;color:var(--muted);font-size:12px" onclick="const i=$('pw');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'Show':'Hide'">Show</button></div>
     <label class="chk"><input id="remember" type="checkbox" checked> Remember on this device</label>
     <button id="unlockBtn" type="button">Unlock</button>
     <div class="lockErr" id="lockErr"></div>
@@ -229,23 +252,28 @@ const TAX = {
   <div class="left">
     <section class="card">
       <p class="eyebrow">Payslip for</p>
-      <div class="banner" id="banner">
-        <b>Employee changes are saved on this device only.</b> To make them permanent for every device, download the app file and upload it to GitHub.
-        <div><button onclick="downloadAppFile()">Download app file</button></div>
-      </div>
+      <div class="banner" id="banner"></div>
       <div class="empRow">
         <div class="f emp-big">
           <label for="emp">Employee</label>
           <select id="emp"></select>
         </div>
-        <button class="ghost iconBtn" title="Manage employees" aria-label="Manage employees" onclick="openList()">
+        <button class="ghost iconBtn" title="Edit this employee's details" aria-label="Edit this employee's details" onclick="openForm($('emp').value, true)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+        <button class="ghost iconBtn" title="All employees / add new" aria-label="All employees / add new" onclick="openList()">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
         </button>
       </div>
+      <div class="missing" id="missing"></div>
       <div class="g2">
         <div class="f"><label for="month">Month</label><input id="month" type="month"></div>
-        <div class="f"><label for="lop">LOP days</label><input id="lop" type="number" inputmode="decimal" min="0" step="0.5" value="0"></div>
+        <div class="f"><label for="lop">LOP days <span id="lopSrc" class="src"></span></label><input id="lop" type="number" inputmode="decimal" min="0" step="0.5" placeholder="0"></div>
       </div>
+      <button class="ghost importBtn" onclick="openImport()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3"/></svg>
+        Import attendance (Excel)
+      </button>
 
       <details>
         <summary>Adjustments <small>this month</small></summary>
@@ -261,7 +289,7 @@ const TAX = {
 
       <details id="prevWrap">
         <summary>Earlier months in this FY <small id="prevCount"></small></summary>
-        <p class="hint">Used for YTD and TDS. Blank LOP = full month. Blank TDS = auto-calculated; enter the actual amount if a different TDS was deducted.</p>
+        <p class="hint">Used for YTD and TDS. LOP days are saved (or come from the attendance import). Blank TDS = auto-calculated; enter the actual amount if a different TDS was deducted.</p>
         <table class="prev"><thead><tr><th>Month</th><th>LOP days</th><th>TDS</th></tr></thead><tbody id="prevBody"></tbody></table>
       </details>
     </section>
@@ -302,8 +330,10 @@ const TAX = {
   </section>
 </main>
 
+<div class="toast" id="toast"></div>
 <dialog id="dlg"><div class="dlgIn" id="dlgIn"></div></dialog>
 <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+<input type="file" id="attFile" accept=".xlsx,.xls,.csv" hidden>
 
 <div class="dock">
   <button class="ghost" onclick="doPrint()">Print</button>
@@ -429,6 +459,84 @@ async function encryptWith(key, text) {
   return { iv: b64(iv), ct: b64(ct) };
 }
 
+/* ---- GitHub sync: saves an encrypted data/employees.json into the repo ---- */
+const DATA_PATH = 'data/employees.json';
+const SYNC_LS = 'osprzet-payroll-github-v1';
+let SYNC = null, REMOTE_SHA = null, BASE_CT = null, syncState = '', syncErr = '';
+async function loadSync() {
+  try {
+    const st = JSON.parse(localStorage.getItem(SYNC_LS) || 'null');
+    if (!st) return null;
+    return { owner: st.owner, repo: st.repo, branch: st.branch, token: await decryptWith(KEY, st.tokenEnc) };
+  } catch (e) { return null; }
+}
+async function storeSync(cfg) {
+  localStorage.setItem(SYNC_LS, JSON.stringify({ owner: cfg.owner, repo: cfg.repo, branch: cfg.branch, tokenEnc: await encryptWith(KEY, cfg.token) }));
+}
+const ghHeaders = cfg => ({ Authorization: `Bearer ${cfg.token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' });
+const ghFileUrl = cfg => `https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/contents/${DATA_PATH}`;
+async function fetchRemote() {
+  try {
+    if (SYNC) {                                             // fresh copy straight from the repo
+      const r = await fetch(ghFileUrl(SYNC) + '?ref=' + encodeURIComponent(SYNC.branch), { headers: ghHeaders(SYNC), cache: 'no-store' });
+      if (r.status === 404) return { missing: true };
+      if (!r.ok) return null;
+      const j = await r.json();
+      return { obj: JSON.parse(atob(j.content.replace(/\s/g, ''))), sha: j.sha };
+    }
+    const r = await fetch(DATA_PATH + '?t=' + Date.now(), { cache: 'no-store' });   // published copy (read-only)
+    return r.ok ? { obj: await r.json() } : null;
+  } catch (e) { return null; }
+}
+// Someone else saved in between: keep their changes and re-apply ours, field by field.
+function mergeLists(base, mine, theirs) {
+  const map = l => new Map(l.map(e => [e.code, e]));
+  const B = map(base), M = map(mine), T = map(theirs), out = [];
+  const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+  for (const code of new Set([...T.keys(), ...M.keys()])) {
+    const b = B.get(code), m = M.get(code), t = T.get(code);
+    if (same(m, b)) { if (t) out.push(t); continue; }        // I didn't touch it → theirs
+    if (!m) continue;                                       // I deleted it
+    if (!t || !b) { out.push(m); continue; }                // I added it (or they deleted it)
+    const rec = {};
+    for (const k of new Set([...Object.keys(t), ...Object.keys(m), ...Object.keys(b)])) {
+      let v = same(m[k], b[k]) ? t[k] : m[k];
+      if (k === 'attendance' && !same(m[k], b[k]) && t[k]) {   // merge month by month
+        v = { ...t[k] }; const mb = b[k] || {}, mm = m[k] || {};
+        for (const mo of new Set([...Object.keys(mm), ...Object.keys(mb)])) if (mm[mo] !== mb[mo]) { if (mm[mo] === undefined) delete v[mo]; else v[mo] = mm[mo]; }
+      }
+      if (v !== undefined) rec[k] = v;
+    }
+    out.push(rec);
+  }
+  return out.sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+}
+async function pushRemote() {
+  const put = async sha => {
+    const enc = await encryptWith(KEY, JSON.stringify(employees));
+    const obj = { v: 1, iter: EMPLOYEES_ENC.iter, salt: EMPLOYEES_ENC.salt, ...enc, updated: new Date().toISOString() };
+    const r = await fetch(ghFileUrl(SYNC), { method: 'PUT', headers: ghHeaders(SYNC), body: JSON.stringify({
+      message: `Update employee data (${employees.length} employees)`, content: btoa(JSON.stringify(obj)), branch: SYNC.branch, ...(sha ? { sha } : {}) }) });
+    return { r, obj };
+  };
+  let { r, obj } = await put(REMOTE_SHA);
+  if (r.status === 409 || r.status === 422) {               // file changed elsewhere → merge with latest, retry
+    const cur = await fetchRemote();
+    REMOTE_SHA = cur && cur.sha || null;
+    if (cur && cur.obj) {
+      try {
+        const theirs = JSON.parse(await decryptWith(KEY, cur.obj));
+        employees = mergeLists(FILE_JSON ? JSON.parse(FILE_JSON) : [], employees, theirs);
+        refreshEmpSelect(); buildPrev(); render();
+      } catch (e) {}
+    }
+    ({ r, obj } = await put(REMOTE_SHA));
+  }
+  if (!r.ok) throw new Error(r.status === 401 ? 'token invalid or expired' : r.status === 403 || r.status === 404 ? 'token has no write access to this repo' : 'GitHub error ' + r.status);
+  REMOTE_SHA = (await r.json()).content.sha; BASE_CT = obj.ct; FILE_JSON = JSON.stringify(employees);
+}
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2400); }
+
 async function loadEmployees() {
   const fromFile = () => JSON.parse(FILE_JSON);
   try {
@@ -445,8 +553,8 @@ async function loadEmployees() {
       const st = JSON.parse(raw);
       const data = JSON.parse(await decryptWith(KEY, st.enc));
       if (Array.isArray(data) && data.length) {
-        if (st.base === EMPLOYEES_ENC.ct) return data;       // edits made on top of this file
-        if (st.dirty && confirm('This device has employee changes that were never uploaded, and the app file has since been updated. Keep this device\'s version? (Cancel = use the app file)')) return data;
+        if (st.base === BASE_CT) return data;                // edits made on top of the current saved data
+        if (st.dirty && confirm('This device has employee changes that were never saved to GitHub, and the saved data has changed since. Keep this device\'s version? (Cancel = use the saved data)')) return data;
       }
       localStorage.removeItem(LS_KEY);
     }
@@ -456,16 +564,97 @@ async function loadEmployees() {
 async function saveLocal() {
   try {
     const enc = await encryptWith(KEY, JSON.stringify(employees));
-    localStorage.setItem(LS_KEY, JSON.stringify({ base: EMPLOYEES_ENC.ct, dirty: isDirty(), enc }));
+    localStorage.setItem(LS_KEY, JSON.stringify({ base: BASE_CT, dirty: isDirty(), enc }));
   } catch (e) {}
 }
-function saveEmployees() {
+async function saveEmployees() {
   employees.sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
-  saveLocal();
-  refreshEmpSelect(); updateBanner(); buildPrev(); render();
+  refreshEmpSelect(); showLop(); buildPrev(); render();
+  await saveLocal();
+  await syncNow();
+}
+async function syncNow() {
+  if (!SYNC || !isDirty()) { updateBanner(); if (!SYNC && isDirty()) toast('Saved on this device'); return; }
+  syncState = 'saving'; updateBanner();
+  try { await pushRemote(); await saveLocal(); syncState = ''; toast('Saved ✓'); }
+  catch (e) { syncState = 'error'; syncErr = e.message || 'network error'; }
+  updateBanner();
 }
 const isDirty = () => JSON.stringify(employees) !== FILE_JSON;
-function updateBanner() { $('banner').classList.toggle('on', isDirty()); }
+function updateBanner() {
+  const b = $('banner'); b.className = 'banner';
+  if (syncState === 'saving') { b.classList.add('on', 'info'); b.innerHTML = 'Saving to GitHub…'; return; }
+  if (!isDirty()) return;
+  b.classList.add('on');
+  b.innerHTML = SYNC
+    ? `<b>Not saved yet</b> — ${esc(syncErr || 'pending')}. Your changes are kept on this device.<div><button onclick="syncNow()">Retry</button><button class="ghost" onclick="openSync()">GitHub settings</button></div>`
+    : `<b>Saved on this device only.</b> Connect GitHub once and every save is stored permanently for all devices.<div><button onclick="openSync()">Connect GitHub</button></div>`;
+}
+
+/* ---- Connect GitHub dialog ---- */
+function guessRepo() {
+  const owner = location.hostname.endsWith('.github.io') ? location.hostname.split('.')[0] : '';
+  const repo = owner ? (location.pathname.split('/').filter(Boolean)[0] || owner + '.github.io') : '';
+  return { owner, repo };
+}
+function openSync() {
+  const g = SYNC || { ...guessRepo(), branch: 'main', token: '' };
+  showDlg(`
+    <div class="dlgHead"><h2>Save to GitHub</h2><button class="ghost small" onclick="closeDlg()">Close</button></div>
+    <div class="dlgBody">
+      <p class="hint" style="margin:0 0 12px">Every save writes an encrypted <code>${DATA_PATH}</code> to your repo, so changes are permanent and show on every device (others see them about a minute later). One-time setup per device that edits:</p>
+      <ol class="steps">
+        <li>GitHub → <b>Settings</b> → <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Fine-grained tokens</b> → <b>Generate new token</b></li>
+        <li>Repository access: <b>Only select repositories</b> → your app repo</li>
+        <li>Permissions → Repository → <b>Contents: Read and write</b></li>
+        <li>Generate, copy the token and paste it below</li>
+      </ol>
+      <div class="g2">
+        <div class="f"><label for="s_owner" class="req">GitHub username</label><input id="s_owner" value="${esc(g.owner)}"></div>
+        <div class="f"><label for="s_repo" class="req">Repository</label><input id="s_repo" value="${esc(g.repo)}"></div>
+      </div>
+      <div class="f"><label for="s_branch">Branch</label><input id="s_branch" value="${esc(g.branch || 'main')}"></div>
+      <div class="f"><label for="s_token" class="req">Access token</label><input id="s_token" type="password" autocomplete="off" placeholder="github_pat_…" value="${esc(g.token)}"></div>
+      <p class="hint" id="s_msg"></p>
+    </div>
+    <div class="dlgFoot">
+      ${SYNC ? '<button class="danger" onclick="disconnectSync()">Disconnect</button>' : ''}
+      <span class="sp"></span>
+      <button id="s_go" onclick="connectSync()">${SYNC ? 'Save settings' : 'Connect'}</button>
+    </div>`);
+}
+async function connectSync() {
+  const cfg = { owner: $('s_owner').value.trim(), repo: $('s_repo').value.trim(), branch: $('s_branch').value.trim() || 'main', token: $('s_token').value.trim() };
+  const msg = t => { $('s_msg').innerHTML = t; };
+  if (!cfg.owner || !cfg.repo || !cfg.token) return msg('<span style="color:#c0392b">Fill in username, repository and token.</span>');
+  $('s_go').disabled = true; msg('Checking access…');
+  try {
+    const r = await fetch(`https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}`, { headers: ghHeaders(cfg), cache: 'no-store' });
+    if (r.status === 401) throw new Error('Token is invalid or expired.');
+    if (!r.ok) throw new Error('Repository not found for this token — check the name and that the token includes this repo.');
+    const prev = SYNC; SYNC = cfg;
+    const remote = await fetchRemote();
+    if (remote && remote.obj) {                              // data already in the repo
+      REMOTE_SHA = remote.sha;
+      try {
+        const rj = await decryptWith(KEY, remote.obj);
+        if (rj !== JSON.stringify(employees) && !isDirty()) { employees = JSON.parse(rj); FILE_JSON = rj; BASE_CT = remote.obj.ct; refreshEmpSelect(); buildPrev(); render(); }
+        else if (!isDirty()) { FILE_JSON = rj; BASE_CT = remote.obj.ct; }
+      } catch (e) {}
+    } else if (!remote) { SYNC = prev; throw new Error('Could not reach GitHub. Try again.'); }
+    await storeSync(cfg);
+    FILE_JSON = isDirty() || (remote && remote.missing) ? '' : FILE_JSON;   // force first save when needed
+    await saveLocal(); await syncNow();
+    if (syncState === 'error') throw new Error('Connected, but saving failed: ' + syncErr + '. Make sure the token has Contents: Read and write.');
+    closeDlg(); toast('GitHub connected — saves are now permanent');
+  } catch (e) { msg(`<span style="color:#c0392b">${esc(e.message)}</span>`); }
+  $('s_go').disabled = false;
+}
+function disconnectSync() {
+  if (!confirm('Disconnect GitHub on this device? Saves will stay on this device only.')) return;
+  try { localStorage.removeItem(SYNC_LS); } catch (e) {}
+  SYNC = null; syncState = ''; closeDlg(); updateBanner();
+}
 function refreshEmpSelect(keep) {
   const cur = keep || $('emp').value;
   $('emp').innerHTML = employees.map(e => `<option value="${esc(e.code)}">${esc(e.code)} — ${esc(e.name)}</option>`).join('');
@@ -479,6 +668,22 @@ function ctcFor(emp, y, m) {                       // CTC effective for a month 
   return ctc;
 }
 const pkey = (p) => `${$('emp').value}|${p.y}-${p.m}`;
+const ymKey = (y, m) => `${y}-${String(m).padStart(2, '0')}`;
+const storedLop = (emp, y, m) => emp.attendance ? emp.attendance[ymKey(y, m)] : undefined;
+let persistTimer = null;
+function setLop(code, y, m, v) {                    // save LOP for one employee-month
+  const e = employees.find(x => x.code === code); if (!e) return;
+  const att = { ...(e.attendance || {}) };
+  if (v === '' || v === undefined || isNaN(v)) delete att[ymKey(y, m)]; else att[ymKey(y, m)] = Number(v);
+  if (Object.keys(att).length) e.attendance = att; else delete e.attendance;
+  clearTimeout(persistTimer);
+  persistTimer = setTimeout(async () => { await saveLocal(); await syncNow(); }, 1500);
+}
+function showLop() {                                // put the saved LOP for this employee-month in the field
+  const emp = employee(), { y, m } = selYM(), v = storedLop(emp, y, m);
+  $('lop').value = v ?? '';
+  $('lopSrc').textContent = v !== undefined ? '· saved' : '';
+}
 function selYM() { const [y, m] = $('month').value.split('-').map(Number); return { y, m }; }
 function fyMonths(y, m) {                          // earlier months of the FY (April start)
   const fyStart = m >= 4 ? y : y - 1, list = [];
@@ -492,12 +697,13 @@ function buildPrev() {
   const list = fyMonths(y, m);
   $('prevCount').textContent = list.length ? `${list.length} month${list.length > 1 ? 's' : ''}` : 'none (April)';
   $('prevBody').innerHTML = list.map(p => {
-    const k = pkey(p), v = prevInputs[k] || {};
+    const k = pkey(p), v = prevInputs[k] || {}, lop = storedLop(employee(), p.y, p.m);
     return `<tr><td>${SHORT[p.m - 1]} ${p.y}</td>
-      <td><input type="number" inputmode="decimal" min="0" step="0.5" data-k="${k}" data-f="lop" value="${v.lop ?? ''}" placeholder="0"></td>
+      <td><input type="number" inputmode="decimal" min="0" step="0.5" data-k="${k}" data-f="lop" data-y="${p.y}" data-m="${p.m}" value="${lop ?? ''}" placeholder="0"></td>
       <td><input type="number" inputmode="decimal" min="0" data-k="${k}" data-f="tds" value="${v.tds ?? ''}" placeholder="Auto"></td></tr>`;
   }).join('') || '<tr><td colspan="3" style="color:var(--muted)">April is the first month of the FY, so YTD = this month.</td></tr>';
   $('prevBody').querySelectorAll('input').forEach(i => i.addEventListener('input', () => {
+    if (i.dataset.f === 'lop') { setLop($('emp').value, +i.dataset.y, +i.dataset.m, i.value === '' ? '' : parseFloat(i.value)); render(); return; }
     const k = i.dataset.k; prevInputs[k] = prevInputs[k] || {};
     prevInputs[k][i.dataset.f] = i.value === '' ? undefined : parseFloat(i.value);
     render();
@@ -522,8 +728,7 @@ function compute() {
     if (i > idx || !employed(p)) return null;
     if (i === idx) return month(emp, p.y, p.m, { lop: val('lop'), arr: val('arrDays'), lopr: val('lopr'),
       advance: val('advance'), esi: val('esi'), lwf: val('lwf') });
-    const v = prevInputs[pkey(p)] || {};
-    return month(emp, p.y, p.m, { lop: v.lop || 0 });
+    return month(emp, p.y, p.m, { lop: storedLop(emp, p.y, p.m) || 0 });
   });
   const projected = months.map(p => employed(p) ? month(emp, p.y, p.m, {}).totalEarn : 0);
 
@@ -553,8 +758,16 @@ function compute() {
   return { emp, y, m, cur, ytd, tax, months, idx };
 }
 
+const PAYSLIP_KEYS = ['department', 'location', 'doj', 'dob', 'gender', 'bankAc', 'pan', 'uan', 'pfNo', 'esiNo'];
+const LABEL = { department: 'Department', location: 'Location', doj: 'Date of joining', dob: 'Date of birth', gender: 'Gender',
+  bankAc: 'Bank A/c', pan: 'PAN', uan: 'UAN', pfNo: 'PF No.', esiNo: 'ESI No.' };
+const missingOf = e => PAYSLIP_KEYS.filter(k => !String(e[k] ?? '').trim());
+
 function render() {
   const R = compute(), { emp, cur } = R;
+  const miss = missingOf(emp);
+  $('missing').classList.toggle('on', miss.length > 0);
+  $('missing').innerHTML = miss.length ? `<span><b>${miss.length} detail${miss.length > 1 ? 's' : ''} missing on payslip:</b> ${miss.map(k => LABEL[k]).join(', ')}</span><button onclick="openForm($('emp').value, true)">Fill in</button>` : '';
   $('netWho').textContent = `${emp.name} · ${SHORT[R.m - 1]} ${R.y}`;
   $('netAmt').textContent = inr(cur.net);
   $('netEarn').textContent = inr(cur.totalEarn);
@@ -683,6 +896,147 @@ function downloadPdf(btn) {
   }).from(clone).save().then(done, done);
 }
 
+/* ===================== attendance import ===================== */
+const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+function loadXlsx() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((ok, fail) => { const sc = document.createElement('script'); sc.src = XLSX_URL; sc.onload = () => ok(window.XLSX); sc.onerror = () => fail(new Error('Could not load the Excel reader. Check your internet connection.')); document.head.appendChild(sc); });
+}
+let importRows = null, importMonth = '';
+function openImport() {
+  const { y, m } = selYM(); importMonth = ymKey(y, m); importRows = null;
+  showDlg(`
+    <div class="dlgHead"><h2>Import attendance</h2><button class="ghost small" onclick="closeDlg()">Close</button></div>
+    <div class="dlgBody">
+      <div class="f"><label for="impMonth">Attendance month</label><input id="impMonth" type="month" value="${importMonth}" onchange="importMonth=this.value; if(importRows) drawImport()"></div>
+      <div class="drop" onclick="$('attFile').click()"><b>Choose Excel or CSV file</b><br>One row per employee, with an Employee ID column</div>
+      <div class="note">
+        <b>Accepted layouts</b> (column names can vary):<br>
+        • <b>Employee ID</b> + <b>LOP Days</b> (or Absent / LWP / Unpaid leave)<br>
+        • <b>Employee ID</b> + <b>Paid days</b> / Payable days → LOP = days in month − paid days<br>
+        • <b>Employee ID</b> + day columns <b>1…31</b> with codes: A / LOP / LWP = 1 day, HD / ½ = 0.5, anything else (P, WO, H, CL, SL…) = paid<br>
+        A <b>Month</b> column is optional; otherwise the month above is used.
+      </div>
+      <div class="tools"><button class="ghost" onclick="downloadTemplate()">Download template</button></div>
+      <div id="impOut"></div>
+    </div>
+    <div class="dlgFoot"><span class="sp"></span><button class="ghost" onclick="closeDlg()">Cancel</button><button id="impApply" onclick="applyImport()" disabled>Apply</button></div>`);
+}
+async function downloadTemplate() {
+  try {
+    const X = await loadXlsx(), [y, m] = (importMonth || ymKey(...todayYM())).split('-').map(Number);
+    const rows = [['Employee ID', 'Employee Name', 'Month', 'LOP Days'],
+      ...employees.map(e => [e.code, e.name, `${SHORT[m - 1]} ${y}`, storedLop(e, y, m) ?? 0])];
+    const ws = X.utils.aoa_to_sheet(rows); ws['!cols'] = [{ wch: 12 }, { wch: 22 }, { wch: 10 }, { wch: 10 }];
+    const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Attendance');
+    X.writeFile(wb, `Attendance_${SHORT[m - 1]}${y}.xlsx`);
+  } catch (e) { alert(e.message); }
+}
+const norm = v => String(v ?? '').trim().toLowerCase().replace(/[^a-z0-9½]+/g, ' ').trim();
+function parseMonth(v, fallback) {
+  if (v instanceof Date && !isNaN(v)) return ymKey(v.getFullYear(), v.getMonth() + 1);
+  const s = String(v ?? '').trim(); if (!s) return fallback;
+  let mt = s.match(/^(\d{4})[-/.](\d{1,2})/); if (mt) return ymKey(+mt[1], +mt[2]);
+  mt = s.match(/^(\d{1,2})[-/.](\d{4})$/); if (mt) return ymKey(+mt[2], +mt[1]);
+  mt = s.match(/^([a-z]{3})[a-z]*[\s\-'/,]*(\d{2,4})$/i);
+  if (mt) { const mi = SHORT.findIndex(x => x.toLowerCase() === mt[1].toLowerCase()); if (mi >= 0) return ymKey(mt[2].length === 2 ? 2000 + +mt[2] : +mt[2], mi + 1); }
+  const d = new Date(s); return isNaN(d) ? fallback : ymKey(d.getFullYear(), d.getMonth() + 1);
+}
+function dayValue(code) {
+  const c = String(code ?? '').trim().toUpperCase().replace(/\s+/g, '');
+  if (!c) return 0;
+  if (['A', 'AB', 'ABS', 'ABSENT', 'LOP', 'LWP', 'UL', 'UPL', 'X'].includes(c)) return 1;
+  if (['HD', 'H/D', 'HALF', 'HALFDAY', '½', '0.5', 'A/2', '½A', 'P/2', 'HA', 'HLOP'].includes(c)) return 0.5;
+  return 0;
+}
+function matchEmp(id) {
+  const raw = String(id ?? '').trim(); if (!raw) return null;
+  const up = raw.toUpperCase().replace(/\s+/g, '');
+  const exact = employees.find(e => e.code.toUpperCase() === up); if (exact) return exact;
+  const dg = up.replace(/\D/g, ''); if (!dg) return null;
+  const hits = employees.filter(e => parseInt(e.code.replace(/\D/g, ''), 10) === parseInt(dg, 10));
+  return hits.length === 1 ? hits[0] : null;
+}
+async function readAttendance(file) {
+  const out = $('impOut');
+  if (!dlg().open) openImport();
+  $('impOut').innerHTML = '<p class="hint">Reading file…</p>';
+  try {
+    const X = await loadXlsx();
+    const wb = X.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const grid = X.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+    // find the header row: first row (within 20) with an employee ID column
+    const idRe = /^(emp(loyee)?\s*(id|code|no|number)|e\s*code|empcode|empid|staff\s*(id|code)|id|code)$/;
+    let hr = -1, idCol = -1;
+    for (let r = 0; r < Math.min(grid.length, 20) && hr < 0; r++) grid[r].forEach((c, i) => { if (hr < 0 && idRe.test(norm(c))) { hr = r; idCol = i; } });
+    if (hr < 0) throw new Error('No "Employee ID" column found. Name the column Employee ID (or Emp Code).');
+    const H = grid[hr].map(norm);
+    const find = re => H.findIndex((h, i) => i !== idCol && re.test(h));
+    const nameCol = find(/name/), monthCol = find(/^(month|period|pay\s*month|salary\s*month)$/);
+    let lopCol = find(/^(lop|lop\s*days|loss of pay( days)?|lwp( days)?)$/);
+    if (lopCol < 0) lopCol = find(/lop|loss of pay|lwp|leave without pay|unpaid|absent/);
+    const paidCol = find(/paid\s*days|payable|days\s*paid|net\s*days|days\s*worked|working\s*days\s*paid/);
+    const dayCols = [];
+    grid[hr].forEach((c, i) => {
+      if (i === idCol) return;
+      if (c instanceof Date) dayCols.push(i);
+      else if (/^\d{1,2}$/.test(String(c).trim()) && +c >= 1 && +c <= 31) dayCols.push(i);
+      else if (/^\d{1,2}[\s\-/]([a-z]{3}|\d{1,2})/i.test(String(c).trim())) dayCols.push(i);
+    });
+    let mode, used;
+    if (lopCol >= 0) { mode = 'lop'; used = `“${grid[hr][lopCol]}” column as LOP days`; }
+    else if (dayCols.length >= 20) { mode = 'days'; used = `${dayCols.length} day columns (A/LOP = 1, HD = 0.5)`; }
+    else if (paidCol >= 0) { mode = 'paid'; used = `“${grid[hr][paidCol]}” column → LOP = days in month − paid days`; }
+    else throw new Error('Could not find an LOP / Absent column, a Paid days column, or day-wise columns 1–31.');
+    importRows = { used, rows: [] };
+    for (let r = hr + 1; r < grid.length; r++) {
+      const row = grid[r], id = row[idCol];
+      if (String(id ?? '').trim() === '') continue;
+      const emp = matchEmp(id);
+      const mo = monthCol >= 0 ? parseMonth(row[monthCol], null) : null;
+      let val = null;
+      if (mode === 'lop') { const n = parseFloat(row[lopCol]); val = isNaN(n) ? 0 : n; }
+      else if (mode === 'days') val = dayCols.reduce((t, i) => t + dayValue(row[i]), 0);
+      else { const n = parseFloat(row[paidCol]); val = isNaN(n) ? null : { paid: n }; }
+      importRows.rows.push({ id: String(id).trim(), name: nameCol >= 0 ? row[nameCol] : '', emp, mo, val });
+    }
+    if (!importRows.rows.length) throw new Error('The file has no employee rows under the header.');
+    drawImport();
+  } catch (e) { importRows = null; $('impOut').innerHTML = `<p class="hint" style="color:#c0392b">${esc(e.message)}</p>`; $('impApply').disabled = true; }
+}
+function resolved(r) {                              // → {ym, lop} for a parsed row
+  const ym = r.mo || importMonth; const [y, m] = ym.split('-').map(Number);
+  let lop = r.val;
+  if (lop && typeof lop === 'object') lop = Math.max(0, daysIn(y, m) - lop.paid);
+  return { ym, y, m, lop: lop === null ? null : Math.min(Math.max(0, lop), daysIn(y, m)) };
+}
+function drawImport() {
+  const rows = importRows.rows, ok = rows.filter(r => r.emp && resolved(r).lop !== null), bad = rows.filter(r => !r.emp);
+  $('impOut').innerHTML = `
+    <div class="note" style="margin-top:14px">Using ${esc(importRows.used)}.<br><b>${ok.length}</b> employee${ok.length === 1 ? '' : 's'} matched${bad.length ? ` · <span style="color:#c0392b"><b>${bad.length}</b> ID${bad.length === 1 ? '' : 's'} not found</span>` : ''}. Changed values are highlighted.</div>
+    <table class="ptable"><tr><th>Emp</th><th>Name</th><th>Month</th><th class="n">Now</th><th class="n">New LOP</th></tr>
+    ${rows.map(r => {
+      if (!r.emp) return `<tr class="bad"><td>${esc(r.id)}</td><td>${esc(r.name)}</td><td colspan="3">ID not found — skipped</td></tr>`;
+      const v = resolved(r), cur = storedLop(r.emp, v.y, v.m);
+      return `<tr><td>${esc(r.emp.code)}</td><td>${esc(r.emp.name)}</td><td>${SHORT[v.m - 1]} ${v.y}</td><td class="n">${cur ?? '–'}</td><td class="n ${cur !== v.lop ? 'chg' : ''}">${v.lop ?? '–'}</td></tr>`;
+    }).join('')}</table>`;
+  $('impApply').disabled = !ok.length;
+}
+async function applyImport() {
+  let n = 0;
+  for (const r of importRows.rows) {
+    if (!r.emp) continue;
+    const v = resolved(r); if (v.lop === null) continue;
+    const e = employees.find(x => x.code === r.emp.code);
+    e.attendance = { ...(e.attendance || {}), [v.ym]: v.lop }; n++;
+  }
+  closeDlg();
+  showLop(); buildPrev(); render();
+  await saveLocal(); await syncNow();
+  toast(`Attendance imported for ${n} employee${n === 1 ? '' : 's'}`);
+}
+
 /* ===================== employee manager ===================== */
 const FIELDS = [
   ['code', 'Employee code', 'text', true], ['name', 'Name', 'text', true],
@@ -704,16 +1058,17 @@ function openList() {
     <div class="dlgBody">
       <ul class="elist">${employees.map(e => `
         <li onclick="openForm('${esc(e.code)}')"><span class="c">${esc(e.code)}</span>
-          <span class="nm">${esc(e.name)}<small>${esc(e.designation || '')}${(e.revisions || []).length ? ' · revised' : ''}</small></span>
+          <span class="nm">${esc(e.name)}<small>${esc(e.designation || '')}${(e.revisions || []).length ? ' · revised' : ''}${missingOf(e).length ? `<span class="tag">${missingOf(e).length} missing</span>` : ''}</small></span>
           <span class="ctc">${inr(ctcFor(e, ...todayYM()))}</span></li>`).join('')}
       </ul>
       <p class="sect" style="margin-top:20px">Save & share</p>
-      <p class="hint" style="margin:0">Changes are stored on this device. <b>Download app file</b> gives you an updated index.html with the employee list built in — upload it to GitHub to make it permanent for everyone. Backup/restore moves data between devices.</p>
+      <div class="syncBox">${SYNC ? `Saving to GitHub: <b>${esc(SYNC.owner)}/${esc(SYNC.repo)}</b> — every save is stored permanently.` : '<b>Not connected to GitHub</b> — saves stay on this device only.'}
+        <div style="margin-top:8px"><button class="small ${SYNC ? 'ghost' : ''}" onclick="openSync()">${SYNC ? 'GitHub settings' : 'Connect GitHub'}</button></div></div>
       <div class="tools">
-        <button onclick="downloadAppFile()">Download app file</button>
+        <button class="ghost" onclick="downloadAppFile()">Download app file</button>
         <button class="ghost" onclick="backupJson()">Backup (JSON)</button>
         <button class="ghost" onclick="$('restoreFile').click()">Restore</button>
-        ${isDirty() ? '<button class="danger" onclick="resetToFile()">Discard device changes</button>' : ''}
+        ${isDirty() && !SYNC ? '<button class="danger" onclick="resetToFile()">Discard device changes</button>' : ''}
       </div>
     </div>`);
 }
@@ -724,9 +1079,10 @@ function nextCode() {
 }
 
 let editing = null;   // original code, or null for new
-let revDraft = [];
-function openForm(code) {
-  editing = code || null;
+let revDraft = [], fromMain = false;
+function formBack() { fromMain ? closeDlg() : openList(); }
+function openForm(code, main = false) {
+  editing = code || null; fromMain = main;
   const e = code ? { ...EMP_DEFAULTS, ...employees.find(x => x.code === code) } : { ...EMP_DEFAULTS, code: nextCode(), name: '', designation: 'EMPLOYEE', annualCtc: '' };
   revDraft = (e.revisions || []).map(r => ({ ...r }));
   const field = ([k, label, type = 'text', req]) => {
@@ -734,10 +1090,11 @@ function openForm(code) {
     const input = type === 'select'
       ? `<select id="f_${k}">${['', 'M', 'F', 'Other'].map(o => `<option ${o === v ? 'selected' : ''}>${o}</option>`).join('')}</select>`
       : `<input id="f_${k}" type="${type}" ${type === 'number' ? 'inputmode="numeric" min="0" step="1000"' : ''} value="${esc(v)}">`;
-    return `<div class="f"><label for="f_${k}" class="${req ? 'req' : ''}">${label}</label>${input}</div>`;
+    const need = code && PAYSLIP_KEYS.includes(k) && !String(v).trim();
+    return `<div class="f${need ? ' need' : ''}"><label for="f_${k}" class="${req ? 'req' : ''}">${label}</label>${input}</div>`;
   };
   showDlg(`
-    <div class="dlgHead"><h2>${code ? 'Edit ' + esc(e.name) : 'Add employee'}</h2><button class="ghost small" onclick="openList()">Back</button></div>
+    <div class="dlgHead"><h2>${code ? 'Edit ' + esc(e.name) : 'Add employee'}</h2><button class="ghost small" onclick="formBack()">${main ? 'Close' : 'Back'}</button></div>
     <div class="dlgBody">
       <div class="g2">${FIELDS.slice(0, 4).map(field).join('')}</div>
       <p class="sect">Salary revisions</p>
@@ -751,10 +1108,11 @@ function openForm(code) {
     <div class="dlgFoot">
       ${code ? '<button class="danger" onclick="delEmp()">Delete</button>' : ''}
       <span class="sp"></span>
-      <button class="ghost" onclick="openList()">Cancel</button>
+      <button class="ghost" onclick="formBack()">Cancel</button>
       <button onclick="saveEmp()">Save</button>
     </div>`);
   drawRevs();
+  if (main) { const first = document.querySelector('.f.need input, .f.need select'); if (first) { first.scrollIntoView({ block: 'center' }); first.focus({ preventScroll: true }); } }
 }
 function drawRevs() {
   $('revs').innerHTML = revDraft.map((r, i) => `
@@ -782,9 +1140,11 @@ function saveEmp() {
   if (revs.some(r => !r.from || !(r.annualCtc > 0))) return err('Each revision needs a month and a CTC.');
   if (revs.length) rec.revisions = revs.sort((a, b) => a.from.localeCompare(b.from)).map(r => ({ from: r.from, annualCtc: r.annualCtc }));
   rec.designation = rec.designation || '';
+  const old = editing && employees.find(e => e.code === editing);
+  if (old && old.attendance) rec.attendance = old.attendance;
   if (editing) employees[employees.findIndex(e => e.code === editing)] = rec; else employees.push(rec);
   refreshEmpSelect(rec.code); $('emp').value = rec.code;
-  saveEmployees(); openList();
+  saveEmployees(); formBack();
 }
 function delEmp() {
   const e = employees.find(x => x.code === editing);
@@ -835,11 +1195,17 @@ async function downloadAppFile() {
 
 /* ===================== lock screen ===================== */
 async function start(key, json, remember) {
-  KEY = key; FILE_JSON = json;
+  KEY = key; FILE_JSON = json; BASE_CT = EMPLOYEES_ENC.ct;
   if (remember) { try { localStorage.setItem(KEY_LS, b64(await crypto.subtle.exportKey('raw', key))); } catch (e) {} }
+  SYNC = await loadSync();
+  const remote = await fetchRemote();                       // latest saved data, if any
+  if (remote && remote.obj) {
+    try { const rj = await decryptWith(KEY, remote.obj); JSON.parse(rj); FILE_JSON = rj; BASE_CT = remote.obj.ct; REMOTE_SHA = remote.sha || null; } catch (e) {}
+  }
   employees = await loadEmployees();
   document.body.classList.remove('locked');
   init();
+  if (SYNC && isDirty()) syncNow();                         // push anything saved while offline
 }
 function lockApp() {
   if (!confirm('Lock the app and forget the password on this device?')) return;
@@ -881,9 +1247,15 @@ function init() {
   $('restoreFile').addEventListener('change', restoreJson);
   const now = new Date();
   $('month').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  $('month').addEventListener('change', () => { buildPrev(); render(); });
-  ['emp','lop','arrDays','lopr','tds','advance','esi','lwf'].forEach(id => $(id).addEventListener('input', render));
-  $('emp').addEventListener('change', () => { buildPrev(); render(); });
+  $('month').addEventListener('change', () => { showLop(); buildPrev(); render(); });
+  ['arrDays','lopr','tds','advance','esi','lwf'].forEach(id => $(id).addEventListener('input', render));
+  $('lop').addEventListener('input', () => {
+    const { y, m } = selYM(); setLop($('emp').value, y, m, $('lop').value === '' ? '' : parseFloat($('lop').value));
+    $('lopSrc').textContent = $('lop').value === '' ? '' : '· saved'; render();
+  });
+  $('emp').addEventListener('change', () => { showLop(); buildPrev(); render(); });
+  $('attFile').addEventListener('change', ev => { const f = ev.target.files[0]; ev.target.value = ''; if (f) readAttendance(f); });
+  showLop();
   buildPrev(); render();
   if (document.fonts) document.fonts.ready.then(fit);
 }
