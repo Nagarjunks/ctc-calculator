@@ -207,16 +207,16 @@ const TAX = {
 </head>
 <body class="locked">
 <div id="lock">
-  <form class="lockCard" id="lockForm" autocomplete="on">
+  <div class="lockCard" id="lockForm">
     <img id="lockLogo" alt="">
     <h1 id="lockName"></h1>
     <p>Enter the password to open payroll</p>
     <input type="text" name="username" value="payroll" autocomplete="username" hidden>
     <input id="pw" type="password" autocomplete="current-password" placeholder="Password" required>
     <label class="chk"><input id="remember" type="checkbox" checked> Remember on this device</label>
-    <button id="unlockBtn" type="submit">Unlock</button>
+    <button id="unlockBtn" type="button">Unlock</button>
     <div class="lockErr" id="lockErr"></div>
-  </form>
+  </div>
 </div>
 
 <div class="topbar"><div class="in">
@@ -856,11 +856,10 @@ function lockApp() {
     }
   } catch (e) { try { localStorage.removeItem(KEY_LS); } catch (_) {} }
   $('pw').focus();
-  $('lockForm').addEventListener('submit', async ev => {
-    ev.preventDefault();
+  const tryUnlock = async () => {
     const btn = $('unlockBtn'); btn.disabled = true; btn.textContent = 'Checking…'; $('lockErr').textContent = '';
     try {
-      const key = await deriveKey($('pw').value);
+      const key = await deriveKey($('pw').value.trim());
       const json = await decryptWith(key, EMPLOYEES_ENC);     // fails on a wrong password
       await start(key, json, $('remember').checked);
     } catch (e) {
@@ -868,7 +867,9 @@ function lockApp() {
       $('pw').select();
     }
     btn.disabled = false; btn.textContent = 'Unlock';
-  });
+  };
+  $('unlockBtn').addEventListener('click', tryUnlock);
+  $('pw').addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); tryUnlock(); } });
 })();
 
 /* ===================== init ===================== */
