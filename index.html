@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CTC Calculator & Payslip</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#ffffff; --ink:#1d2330; --muted:#667085; --line:#e3e6eb;
+    --accent:#2f5bd3; --accent-soft:#eaf0ff; --good:#127a4a; --bad:#b42318;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#14171c; --card:#1c2027; --ink:#e8eaee; --muted:#9aa3b2; --line:#2c323c;
+           --accent:#7b9cff; --accent-soft:#1f2a44; --good:#4cc38a; --bad:#ff8a80; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{padding:20px 16px 8px;max-width:1100px;margin:auto}
+  header h1{margin:0;font-size:22px}
+  header p{margin:4px 0 0;color:var(--muted);font-size:14px}
+  main{max-width:1100px;margin:auto;padding:8px 16px 40px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+  @media(min-width:900px){ main{grid-template-columns:380px minmax(0,1fr)} }
+  .card{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card h2{font-size:15px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+  input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+  input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+  .field{margin-bottom:10px}
+  details{border-top:1px solid var(--line);padding-top:10px;margin-top:6px}
+  summary{cursor:pointer;font-weight:600;margin-bottom:10px}
+  .big input{font-size:20px;font-weight:600}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+  .kpi{background:var(--accent-soft);border-radius:10px;padding:12px}
+  .kpi span{display:block;font-size:12px;color:var(--muted)}
+  .kpi b{font-size:20px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  tr.tot td{font-weight:700;border-top:2px solid var(--line)}
+  .tables{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+  @media(min-width:640px){ .tables{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  button{border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;background:var(--accent);color:#fff}
+  button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+  .note{font-size:12px;color:var(--muted);margin-top:10px}
+  .scroll{overflow-x:auto}
+
+  /* ---------- Payslip (always light, A4-ish) ---------- */
+  #slipWrap{margin-top:16px;overflow-x:auto}
+  #payslip{background:#fff;color:#111;width:740px;margin:auto;padding:24px;border:1px solid #ccc;font:13px/1.4 Arial,Helvetica,sans-serif}
+  #payslip h3{margin:0;text-align:center;font-size:18px;text-transform:uppercase}
+  #payslip .sub{text-align:center;font-size:12px;color:#444}
+  #payslip .title{text-align:center;font-weight:700;margin:10px 0;padding:6px;background:#eef1f6;border:1px solid #999}
+  #payslip table{font-size:12.5px;color:#111}
+  #payslip td,#payslip th{border:1px solid #999;padding:5px 7px}
+  #payslip th{background:#eef1f6}
+  #payslip .lbl{font-weight:600;width:22%}
+  #payslip .net td{font-weight:700;background:#eef1f6}
+  #payslip .foot{text-align:center;font-size:11px;color:#555;margin-top:12px}
+  @media print{
+    body{background:#fff}
+    header, .card:not(#resultCard), #resultCard > *:not(#slipWrap){display:none !important}
+    main{display:block;padding:0}
+    #resultCard{border:0;padding:0}
+    #payslip{border:0}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>CTC Calculator & Payslip</h1>
+  <p>Enter annual CTC and attendance. The breakup follows the payroll sheet rules; download the payslip as PDF.</p>
+</header>
+
+<main>
+  <!-- ================= INPUTS ================= -->
+  <section class="card">
+    <h2>Salary</h2>
+    <div class="field big">
+      <label for="annualCtc">Annual CTC (₹)</label>
+      <input id="annualCtc" type="number" inputmode="decimal" min="0" step="1000" value="525600">
+    </div>
+    <div class="grid2">
+      <div class="field">
+        <label for="month">Salary month</label>
+        <input id="month" type="month">
+      </div>
+      <div class="field">
+        <label for="daysInMonth">Days in month</label>
+        <input id="daysInMonth" type="number" min="1" max="31">
+      </div>
+      <div class="field">
+        <label for="workingDays">Working days</label>
+        <input id="workingDays" type="number" min="0" max="31">
+      </div>
+      <div class="field">
+        <label for="leaves">Leaves (LOP)</label>
+        <input id="leaves" type="number" min="0" step="0.5" value="0">
+      </div>
+    </div>
+
+    <details>
+      <summary>Other earnings & deductions</summary>
+      <div class="grid2">
+        <div class="field"><label for="arrears">Arrears</label><input id="arrears" type="number" min="0" value="0"></div>
+        <div class="field"><label for="advance">Advance</label><input id="advance" type="number" min="0" value="0"></div>
+        <div class="field"><label for="esi">ESI deduction</label><input id="esi" type="number" min="0" value="0"></div>
+        <div class="field"><label for="lwf">LWF</label><input id="lwf" type="number" min="0" value="0"></div>
+        <div class="field"><label for="esicEr">Employer ESIC</label><input id="esicEr" type="number" min="0" value="0"></div>
+      </div>
+    </details>
+
+    <details>
+      <summary>Employee details (for payslip)</summary>
+      <div class="field"><label for="company">Company name</label><input id="company" placeholder="Your organisation name"></div>
+      <div class="field"><label for="companyAddr">Company address (optional)</label><input id="companyAddr"></div>
+      <div class="grid2">
+        <div class="field"><label for="empName">Employee name</label><input id="empName" placeholder="Full name"></div>
+        <div class="field"><label for="empCode">Employee no.</label><input id="empCode" placeholder="EMP001"></div>
+        <div class="field"><label for="designation">Designation</label><input id="designation" value="EMPLOYEE"></div>
+        <div class="field"><label for="func">Function</label><input id="func" placeholder="e.g. ACADEMICS"></div>
+        <div class="field"><label for="uan">UAN no.</label><input id="uan"></div>
+        <div class="field"><label for="pfNo">PF no.</label><input id="pfNo"></div>
+        <div class="field"><label for="esiNo">ESI no.</label><input id="esiNo"></div>
+        <div class="field"><label for="pan">PAN</label><input id="pan"></div>
+        <div class="field"><label for="doj">Date of joining</label><input id="doj" type="date"></div>
+        <div class="field"><label for="payMode">Payment mode</label>
+          <select id="payMode"><option>Bank</option><option>Cash</option><option>Cheque</option></select></div>
+        <div class="field"><label for="acct">Account no.</label><input id="acct"></div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ================= RESULTS ================= -->
+  <section class="card" id="resultCard">
+    <h2>Breakup</h2>
+    <div class="kpis">
+      <div class="kpi"><span>Monthly CTC</span><b id="kCtc">–</b></div>
+      <div class="kpi"><span>Gross (rate)</span><b id="kGross">–</b></div>
+      <div class="kpi"><span>Net take-home</span><b id="kNet">–</b></div>
+      <div class="kpi"><span>Payable days</span><b id="kDays">–</b></div>
+    </div>
+
+    <div class="tables">
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Earnings</th><th class="n">Rate</th><th class="n">Earned</th></tr></thead>
+          <tbody id="earnBody"></tbody>
+        </table>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Deductions</th><th class="n">Amount</th></tr></thead>
+          <tbody id="dedBody"></tbody>
+        </table>
+        <table style="margin-top:14px">
+          <thead><tr><th>Employer cost</th><th class="n">Monthly</th><th class="n">Annual</th></tr></thead>
+          <tbody id="ctcBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="btns">
+      <button id="btnPdf">Download payslip (PDF)</button>
+      <button id="btnPrint" class="ghost">Print</button>
+      <button id="btnToggle" class="ghost">Show payslip</button>
+    </div>
+    <p class="note">Rules: Gross = CTC − Employer PF · Basic = 50% of Gross · HRA = 40% of Basic · Other Allowance = balance · Earned = Rate ÷ Days × Payable days · Employee PF = 12% of earned Basic (max ₹3,000) · Employer PF = 6% of CTC÷1.06 (max ₹3,000) · PT = ₹200 if earnings ≥ ₹25,000.</p>
+
+    <div id="slipWrap" hidden>
+      <div id="payslip"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ===== Excel-compatible helpers ===== */
+// Excel ROUND: half away from zero, with a small epsilon to absorb float noise
+function xround(v, d = 0) {
+  const f = Math.pow(10, d);
+  const x = Math.abs(v) * f;
+  const r = Math.round(x + 1e-9) / f;
+  return v < 0 ? -r : r;
+}
+const $ = id => document.getElementById(id);
+const num = id => { const v = parseFloat($(id).value); return isNaN(v) ? 0 : v; };
+const inr = (v, dp = 0) => '₹' + Number(v).toLocaleString('en-IN', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+const fmt = (v, dp = 2) => Number(v).toLocaleString('en-IN', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ===== Core calculation (mirrors the BANK sheet, one row) ===== */
+function calculate(inp) {
+  const K  = xround(inp.annualCtc / 12, 2);                               // Monthly CTC
+  const AL = xround(K / 1.06, 2) * 0.06 <= 3000 ? xround(K / 1.06 * 0.06, 2) : 3000; // Employer PF
+  const Q  = xround(K - AL, 2);                                            // Gross (rate)
+  const L  = xround(Q * 0.5, 2);                                           // Basic
+  const M  = xround(L * 0.4, 2);                                           // HRA
+  const N  = xround(Q - L - M, 2);                                         // Other allowance
+  const O = 0, P = 0;                                                      // Medical, CCA
+
+  const R = inp.daysInMonth, S = inp.workingDays, T = inp.leaves;
+  const U = S - T;                                                         // Payable days
+  const pr = rate => R > 0 ? xround(rate / R * U, 0) : 0;
+  const V = pr(L), W = pr(M), X = pr(N), Y = 0, Z = 0;
+  const AA = V + W + X + Y + Z;                                            // Earned gross
+  const AB = inp.arrears;
+  const AC = AA + AB;                                                      // Total earnings
+
+  const AD = Math.min(xround(V * 0.12, 0), 3000);                          // Employee PF
+  const AE = inp.esi;
+  const AF = AC >= 25000 ? 200 : 0;                                        // Professional tax
+  const AG = inp.lwf, AH = inp.advance;
+  const AI = AD + AE + AF + AG + AH;                                       // Total deductions
+  const AJ = AC - AI;                                                      // Net
+  const AM = inp.esicEr;
+  const AN = AC + AL + AM;                                                 // Total CTC (month)
+
+  return { monthlyCtc:K, erPf:AL, gross:Q, basic:L, hra:M, other:N, med:O, cca:P,
+           days:R, working:S, leaves:T, payable:U,
+           eBasic:V, eHra:W, eOther:X, eMed:Y, eCca:Z, earnedGross:AA, arrears:AB, totalEarn:AC,
+           eePf:AD, esi:AE, pt:AF, lwf:AG, advance:AH, totalDed:AI, net:AJ, esicEr:AM, totalCtc:AN };
+}
+
+/* ===== Amount in words (Indian system) ===== */
+function inWords(n) {
+  n = Math.round(n);
+  if (n === 0) return 'Zero';
+  const a = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const b = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  const two = x => x < 20 ? a[x] : b[Math.floor(x/10)] + (x%10 ? ' ' + a[x%10] : '');
+  const three = x => (x >= 100 ? a[Math.floor(x/100)] + ' Hundred' + (x%100 ? ' ' : '') : '') + (x%100 ? two(x%100) : '');
+  const parts = [];
+  const crore = Math.floor(n / 1e7); n %= 1e7;
+  const lakh = Math.floor(n / 1e5); n %= 1e5;
+  const thou = Math.floor(n / 1e3); n %= 1e3;
+  if (crore) parts.push(inWords(crore) + ' Crore');
+  if (lakh) parts.push(two(lakh) + ' Lakh');
+  if (thou) parts.push(two(thou) + ' Thousand');
+  if (n) parts.push(three(n));
+  return parts.join(' ');
+}
+
+/* ===== UI ===== */
+function readInputs() {
+  return {
+    annualCtc: num('annualCtc'), daysInMonth: num('daysInMonth'), workingDays: num('workingDays'),
+    leaves: num('leaves'), arrears: num('arrears'), advance: num('advance'),
+    esi: num('esi'), lwf: num('lwf'), esicEr: num('esicEr')
+  };
+}
+
+function setMonthDefaults() {
+  const [y, m] = $('month').value.split('-').map(Number);
+  if (!y || !m) return;
+  const d = new Date(y, m, 0).getDate();
+  $('daysInMonth').value = d;
+  $('workingDays').value = d;
+}
+
+function monthLabel() {
+  const [y, m] = ($('month').value || '').split('-').map(Number);
+  if (!y) return '';
+  return new Date(y, m - 1, 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+}
+
+let last = null;
+function render() {
+  const r = calculate(readInputs());
+  last = r;
+  $('kCtc').textContent = inr(r.monthlyCtc, 2);
+  $('kGross').textContent = inr(r.gross, 2);
+  $('kNet').textContent = inr(r.net);
+  $('kDays').textContent = `${r.payable} / ${r.days}`;
+
+  const row = (l, a, b) => `<tr><td>${l}</td><td class="n">${a}</td>${b !== undefined ? `<td class="n">${b}</td>` : ''}</tr>`;
+  const tot = (l, a, b) => `<tr class="tot"><td>${l}</td><td class="n">${a}</td>${b !== undefined ? `<td class="n">${b}</td>` : ''}</tr>`;
+
+  $('earnBody').innerHTML =
+    row('Basic', fmt(r.basic), fmt(r.eBasic, 0)) +
+    row('HRA', fmt(r.hra), fmt(r.eHra, 0)) +
+    row('Other allowance', fmt(r.other), fmt(r.eOther, 0)) +
+    row('Medical allowance', fmt(r.med), fmt(r.eMed, 0)) +
+    row('CCA', fmt(r.cca), fmt(r.eCca, 0)) +
+    (r.arrears ? row('Arrears', '–', fmt(r.arrears, 0)) : '') +
+    tot('Total', fmt(r.gross), fmt(r.totalEarn, 0));
+
+  $('dedBody').innerHTML =
+    row('Employee PF', fmt(r.eePf, 0)) +
+    row('ESI', fmt(r.esi, 0)) +
+    row('Professional tax', fmt(r.pt, 0)) +
+    row('LWF', fmt(r.lwf, 0)) +
+    row('Advance', fmt(r.advance, 0)) +
+    tot('Total deductions', fmt(r.totalDed, 0)) +
+    tot('Net pay', fmt(r.net, 0));
+
+  $('ctcBody').innerHTML =
+    row('Earned gross + arrears', fmt(r.totalEarn), fmt(r.totalEarn * 12)) +
+    row('Employer PF', fmt(r.erPf), fmt(r.erPf * 12)) +
+    row('Employer ESIC', fmt(r.esicEr), fmt(r.esicEr * 12)) +
+    tot('Total CTC', fmt(r.totalCtc), fmt(r.totalCtc * 12));
+
+  renderPayslip(r);
+}
+
+function renderPayslip(r) {
+  const v = id => esc($(id).value);
+  const doj = $('doj').value ? new Date($('doj').value).toLocaleDateString('en-IN') : '';
+  $('payslip').innerHTML = `
+    <h3>${v('company') || 'Company Name'}</h3>
+    ${$('companyAddr').value ? `<div class="sub">${v('companyAddr')}</div>` : ''}
+    <div class="title">PAY SLIP${monthLabel() ? ' — ' + esc(monthLabel()) : ''}</div>
+    <table>
+      <tr><td class="lbl">Employee Name</td><td>${v('empName')}</td><td class="lbl">UAN No</td><td>${v('uan')}</td></tr>
+      <tr><td class="lbl">Employee Number</td><td>${v('empCode')}</td><td class="lbl">PF No</td><td>${v('pfNo')}</td></tr>
+      <tr><td class="lbl">Designation</td><td>${v('designation')}</td><td class="lbl">ESI No</td><td>${v('esiNo')}</td></tr>
+      <tr><td class="lbl">Function</td><td>${v('func')}</td><td class="lbl">PAN</td><td>${v('pan')}</td></tr>
+      <tr><td class="lbl">Date of Joining</td><td>${doj}</td><td class="lbl">Payment Mode</td><td>${v('payMode')}</td></tr>
+      <tr><td class="lbl">Working Days</td><td>${r.working}</td><td class="lbl">Account Number</td><td>${v('acct')}</td></tr>
+      <tr><td class="lbl">Leave</td><td>${r.leaves}</td><td class="lbl">Gross Salary</td><td>${fmt(r.totalEarn, 0)}</td></tr>
+      <tr><td class="lbl">Payable Days</td><td>${r.payable}</td><td class="lbl">Monthly CTC</td><td>${fmt(r.monthlyCtc)}</td></tr>
+    </table>
+    <table style="margin-top:12px">
+      <tr><th>Earnings</th><th style="text-align:right">Rate of Wages</th><th style="text-align:right">Earned Wages</th><th>Deductions</th><th style="text-align:right">Amount</th></tr>
+      <tr><td>Basic Salary</td><td class="n">${fmt(r.basic)}</td><td class="n">${fmt(r.eBasic,0)}</td><td>PF</td><td class="n">${fmt(r.eePf,0)}</td></tr>
+      <tr><td>HRA</td><td class="n">${fmt(r.hra)}</td><td class="n">${fmt(r.eHra,0)}</td><td>ESI</td><td class="n">${fmt(r.esi,0)}</td></tr>
+      <tr><td>Other Allowance</td><td class="n">${fmt(r.other)}</td><td class="n">${fmt(r.eOther,0)}</td><td>PT</td><td class="n">${fmt(r.pt,0)}</td></tr>
+      <tr><td>Medical Allowance</td><td class="n">${fmt(r.med)}</td><td class="n">${fmt(r.eMed,0)}</td><td>Advance</td><td class="n">${fmt(r.advance,0)}</td></tr>
+      <tr><td>Arrears / Other</td><td class="n">0.00</td><td class="n">${fmt(r.arrears,0)}</td><td>LWF</td><td class="n">${fmt(r.lwf,0)}</td></tr>
+      <tr class="net"><td>Total Gross</td><td class="n">${fmt(r.gross)}</td><td class="n">${fmt(r.totalEarn,0)}</td><td>Total Deductions</td><td class="n">${fmt(r.totalDed,0)}</td></tr>
+      <tr class="net"><td>Net Payable</td><td colspan="4">₹ ${fmt(r.net,0)} &nbsp;(Rupees ${inWords(r.net)} Only)</td></tr>
+    </table>
+    <div class="foot">Signature is not required, this is a computer generated slip.</div>`;
+}
+
+function downloadPdf() {
+  const wrap = $('slipWrap');
+  const wasHidden = wrap.hidden;
+  wrap.hidden = false;
+  const name = ($('empCode').value || $('empName').value || 'payslip').replace(/\s+/g, '_');
+  const file = `Payslip_${name}_${$('month').value || ''}.pdf`;
+  if (typeof html2pdf === 'undefined') { window.print(); wrap.hidden = wasHidden; return; }
+  // Render from a clean off-screen copy so page scroll/overflow can't blank the PDF
+  const clone = $('payslip').cloneNode(true);
+  $('payslip').id = 'payslipLive';                               // clone keeps id="payslip" for styling
+  clone.style.cssText = 'width:100%;max-width:none;border:0;padding:8px;margin:0';
+  const restore = () => { $('payslipLive').id = 'payslip'; wrap.hidden = wasHidden; };
+  html2pdf().set({
+    margin: 10, filename: file,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).from(clone).save().then(restore, restore);
+}
+
+// Init
+(function init() {
+  const now = new Date();
+  $('month').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  setMonthDefaults();
+  $('month').addEventListener('change', () => { setMonthDefaults(); render(); });
+  document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', render));
+  $('btnPdf').addEventListener('click', downloadPdf);
+  $('btnPrint').addEventListener('click', () => { $('slipWrap').hidden = false; $('btnToggle').textContent = 'Hide payslip'; window.print(); });
+  $('btnToggle').addEventListener('click', () => {
+    const w = $('slipWrap'); w.hidden = !w.hidden;
+    $('btnToggle').textContent = w.hidden ? 'Show payslip' : 'Hide payslip';
+  });
+  render();
+})();
+
+// Exposed for testing in Node
+if (typeof module !== 'undefined') module.exports = { calculate, xround, inWords };
+</script>
+</body>
+</html>
