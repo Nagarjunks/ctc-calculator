@@ -3,375 +3,889 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CTC Calculator & Payslip</title>
+<title>Payroll & Payslips</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
+<script>
+/* =====================================================================
+   CONFIG — edit this block only. Everything else is calculated.
+   ===================================================================== */
+const COMPANY = {
+  name: 'OSPRZET TECHNOLOGIES PRIVATE LIMITED',
+  addressLines: [
+    'No. 19/36/1, 1st Floor, 3rd Main,',
+    'Basavanapura Main Road, K R Puram,',
+    'Bhattarahalli, Bangalore - 560049',
+    'PAN: AACCO5676P'
+  ],
+  logo: 'LOGO_EMBEDDED'    // or a file name like 'logo.png' uploaded to the same repo
+};
+
+// Employee master — manage it from the app ("Employees" button), then
+// "Download app file" and upload it to GitHub. The list is stored encrypted.
+const EMP_DEFAULTS = { department: '', location: '', costCenter: '', dob: '', doj: '',
+  gender: '', bankAc: '', pan: '', uan: '', pfNo: '', esiNo: '', epsNo: '' };
+// Encrypted with the app password (AES-256-GCM, PBKDF2 600k). Do not edit by hand.
+const EMPLOYEES_ENC = /*EMP_START*/{"v":1,"iter":600000,"salt":"7aH7fa0ywv7vr9Ib5doDVg==","iv":"B1lOyZyC73IQ8m0V","ct":"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"}/*EMP_END*/;
+
+// Income tax — new regime, FY 2026-27 (AY 2027-28). Same rates as FY 2025-26.
+const TAX = {
+  stdDeduction: 75000,
+  slabs: [[400000, 0], [800000, 0.05], [1200000, 0.10], [1600000, 0.15],
+          [2000000, 0.20], [2400000, 0.25], [Infinity, 0.30]],
+  rebateLimit: 1200000, rebateMax: 60000,          // nil tax up to ₹12L taxable, with marginal relief above
+  surcharge: [[5000000, 0.10], [10000000, 0.15], [20000000, 0.25]],   // capped at 25% in new regime
+  cess: 0.04
+};
+</script>
 <style>
   :root{
-    --bg:#f5f6f8; --card:#ffffff; --ink:#1d2330; --muted:#667085; --line:#e3e6eb;
-    --accent:#2f5bd3; --accent-soft:#eaf0ff; --good:#127a4a; --bad:#b42318;
+    --bg:#f3f4f7; --surface:#fff; --ink:#161a23; --muted:#646c7c; --line:#e2e5ec;
+    --accent:#2a6db5; --accent-ink:#fff; --accent-soft:#e7f1fc; --field:#f7f8fa;
+    --shadow:0 1px 2px rgba(16,24,40,.05),0 4px 16px rgba(16,24,40,.06);
   }
   @media (prefers-color-scheme: dark){
-    :root{ --bg:#14171c; --card:#1c2027; --ink:#e8eaee; --muted:#9aa3b2; --line:#2c323c;
-           --accent:#7b9cff; --accent-soft:#1f2a44; --good:#4cc38a; --bad:#ff8a80; }
+    :root{ --bg:#0f1115; --surface:#181b22; --ink:#e9ebf0; --muted:#98a0ae; --line:#2a2f3a;
+      --accent:#7fb4ec; --accent-ink:#0b1420; --accent-soft:#16263a; --field:#12151b;
+      --shadow:0 1px 2px rgba(0,0,0,.3); }
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  header{padding:20px 16px 8px;max-width:1100px;margin:auto}
-  header h1{margin:0;font-size:22px}
-  header p{margin:4px 0 0;color:var(--muted);font-size:14px}
-  main{max-width:1100px;margin:auto;padding:8px 16px 40px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
-  @media(min-width:900px){ main{grid-template-columns:380px minmax(0,1fr)} }
-  .card{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
-  .card h2{font-size:15px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
-  label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
-  input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
-  input:focus{outline:2px solid var(--accent);outline-offset:-1px}
-  .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
-  .field{margin-bottom:10px}
-  details{border-top:1px solid var(--line);padding-top:10px;margin-top:6px}
-  summary{cursor:pointer;font-weight:600;margin-bottom:10px}
-  .big input{font-size:20px;font-weight:600}
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
-  .kpi{background:var(--accent-soft);border-radius:10px;padding:12px}
-  .kpi span{display:block;font-size:12px;color:var(--muted)}
-  .kpi b{font-size:20px}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left}
-  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
-  tr.tot td{font-weight:700;border-top:2px solid var(--line)}
-  .tables{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
-  @media(min-width:640px){ .tables{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
-  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
-  button{border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;background:var(--accent);color:#fff}
-  button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
-  .note{font-size:12px;color:var(--muted);margin-top:10px}
-  .scroll{overflow-x:auto}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font:15px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:84px}
+  .topbar{background:var(--surface);border-bottom:1px solid var(--line)}
+  .topbar .in{max-width:1240px;margin:auto;padding:14px 16px;display:flex;align-items:center;gap:12px}
+  .mark{width:44px;height:44px;border-radius:10px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;flex:none;overflow:hidden}
+  .mark img{width:38px;height:38px;object-fit:contain}
+  .topbar h1{margin:0;font-size:16px;font-weight:700;line-height:1.2}
+  .topbar p{margin:0;font-size:12.5px;color:var(--muted)}
+  main{max-width:1240px;margin:auto;padding:16px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+  @media(min-width:1000px){ main{grid-template-columns:400px minmax(0,1fr);align-items:start} .left{position:sticky;top:16px} body{padding-bottom:16px} }
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow);min-width:0}
+  .card + .card{margin-top:16px}
+  .eyebrow{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+  label{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margin-bottom:5px}
+  input,select{width:100%;height:42px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--field);color:var(--ink);font:inherit;font-size:15px}
+  select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 18px,calc(100% - 13px) 18px;background-size:5px 5px;background-repeat:no-repeat;padding-right:34px}
+  input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .f{margin-bottom:12px}
+  .g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+  .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .emp-big select{height:48px;font-weight:600;font-size:16px}
+  details{border-top:1px solid var(--line);margin:4px -16px 0;padding:0 16px}
+  details:last-child{margin-bottom:-4px}
+  summary{list-style:none;cursor:pointer;padding:13px 0;font-weight:600;font-size:14px;display:flex;justify-content:space-between;align-items:center}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:'+';font-size:18px;color:var(--muted);font-weight:400}
+  details[open] summary::after{content:'–'}
+  summary small{font-weight:400;color:var(--muted);margin-left:6px}
+  .hint{font-size:12px;color:var(--muted);margin:-4px 0 12px}
+  .prev{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:12px}
+  .prev th{font-size:12px;color:var(--muted);font-weight:500;text-align:left;padding:4px 6px}
+  .prev td{padding:3px 6px}
+  .prev input{height:36px;font-size:14px}
+  .prev td:first-child{white-space:nowrap;font-weight:500;width:34%}
 
-  /* ---------- Payslip (always light, A4-ish) ---------- */
-  #slipWrap{margin-top:16px;overflow-x:auto}
-  #payslip{background:#fff;color:#111;width:740px;margin:auto;padding:24px;border:1px solid #ccc;font:13px/1.4 Arial,Helvetica,sans-serif}
-  #payslip h3{margin:0;text-align:center;font-size:18px;text-transform:uppercase}
-  #payslip .sub{text-align:center;font-size:12px;color:#444}
-  #payslip .title{text-align:center;font-weight:700;margin:10px 0;padding:6px;background:#eef1f6;border:1px solid #999}
-  #payslip table{font-size:12.5px;color:#111}
-  #payslip td,#payslip th{border:1px solid #999;padding:5px 7px}
-  #payslip th{background:#eef1f6}
-  #payslip .lbl{font-weight:600;width:22%}
-  #payslip .net td{font-weight:700;background:#eef1f6}
-  #payslip .foot{text-align:center;font-size:11px;color:#555;margin-top:12px}
+  .net{background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+  .net .who{font-size:13px;opacity:.85}
+  .net .amt{font-size:32px;font-weight:700;letter-spacing:-.02em;margin:2px 0 10px}
+  .net .row{display:flex;gap:18px;flex-wrap:wrap;font-size:13px}
+  .net .row b{display:block;font-size:15px}
+  .bk{width:100%;border-collapse:collapse;font-size:14px}
+  .bk td{padding:7px 0;border-bottom:1px solid var(--line)}
+  .bk td.n{text-align:right;font-variant-numeric:tabular-nums}
+  .bk tr:last-child td{border-bottom:0;font-weight:700}
+
+  .previewCard{padding:12px}
+  .previewHead{display:flex;justify-content:space-between;align-items:center;padding:4px 4px 12px}
+  .actions{display:flex;gap:8px}
+  button{height:42px;border:0;border-radius:10px;padding:0 16px;font:inherit;font-weight:600;font-size:14px;cursor:pointer;background:var(--accent);color:var(--accent-ink);display:inline-flex;align-items:center;gap:8px;justify-content:center}
+  button.ghost{background:var(--accent-soft);color:var(--accent)}
+  button:disabled{opacity:.6}
+  .stage{background:#d9dce3;border-radius:10px;padding:12px;overflow:hidden}
+  @media (prefers-color-scheme: dark){ .stage{background:#0b0d11} }
+  .scaler{transform-origin:top left}
+  .sheet{box-shadow:0 2px 12px rgba(0,0,0,.18)}
+  .dock{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px;z-index:5}
+  .dock button{flex:1}
+  @media(min-width:1000px){ .dock{display:none} }
+  @media(max-width:999px){ .previewHead .actions{display:none} }
+
+  /* ================= PAYSLIP (print-exact, A4) ================= */
+  .sheet{width:210mm;height:297mm;background:#fff;color:#000;padding:19.5mm 5.3mm 9mm 6.2mm;font-family:Helvetica,Arial,sans-serif;font-size:8pt;line-height:1.25}
+  .slip{height:100%;display:flex;flex-direction:column}
+  .slip table{border-collapse:collapse;width:100%;table-layout:fixed}
+  .slip td,.slip th{padding:2px 4px;vertical-align:top;text-align:left;font-weight:normal}
+  .box{border:0.75pt solid #000}
+  .hdr{display:flex;border-bottom:0.75pt solid #000;min-height:28.5mm}
+  .hdr .logo{width:60.5mm;padding:3mm 0 0 1.5mm}
+  .hdr .logo img{max-width:36mm;max-height:23mm}
+  .hdr .logo .ph{width:22mm;height:22mm}
+  .hdr .co{padding-top:3.2mm;font-size:9pt;line-height:1.55}
+  .hdr .co .nm{font-weight:bold}
+  .hdr .co .tt{font-weight:bold;margin-top:6mm;padding-bottom:1.5mm}
+  .info td{border:0.75pt solid #000;height:5.2mm}
+  .info tr:first-child td{border-top:0}
+  .info td:first-child{border-left:0}.info td:last-child{border-right:0}
+  .info .l{font-weight:bold}
+  .gap{height:6.5mm;border-bottom:0.75pt solid #000}
+  .gap.top{border-top:0}
+  .earn th{font-weight:bold;font-size:9pt;border:0.75pt solid #000;border-top:0;padding:3px 4px}
+  .earn th.r{text-align:center}
+  .earn td{border-left:0.75pt solid #000;border-right:0.75pt solid #000;padding:2.4px 4px}
+  .earn td.r{text-align:right}
+  .earn tr:first-of-type td{padding-top:4px}
+  .earn tr.tot td{border:0.75pt solid #000;padding:3px 4px}
+  .earn tr.tot td.lb{font-weight:bold;font-size:9pt}
+  .earn th:first-child,.earn td:first-child{border-left:0}
+  .earn th:last-child,.earn td:last-child{border-right:0}
+  .netrow{border-bottom:0.75pt solid #000;padding:2px 4px 2px 14px;font-weight:bold;font-size:9pt}
+  .netrow span{display:inline-block;width:15mm}
+  .days{margin-top:9mm}
+  .days th{border:0.75pt solid #000;font-weight:bold;text-align:center !important;vertical-align:middle !important;font-size:7.5pt;height:7mm;line-height:1.1}
+  .days td{border:0.75pt solid #000;text-align:right !important}
+  .foot{margin-top:auto;font-size:8.5pt;line-height:1.6;padding-left:2px}
+
+  .empRow{display:flex;gap:8px;align-items:flex-end}
+  .empRow .f{flex:1;min-width:0}
+  .iconBtn{height:48px;width:48px;padding:0;flex:none;margin-bottom:12px}
+  .banner{display:none;background:#fff6e0;color:#6b4a00;border:1px solid #f1d38a;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:12px}
+  .banner.on{display:block}
+  .banner button{height:32px;font-size:13px;padding:0 12px;margin-top:8px}
+  @media (prefers-color-scheme: dark){ .banner{background:#2d2410;color:#f3d48c;border-color:#5a4718} }
+  dialog{border:0;padding:0;border-radius:16px;width:min(680px,calc(100vw - 24px));max-height:calc(100dvh - 24px);background:var(--surface);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+  dialog::backdrop{background:rgba(10,14,22,.55)}
+  @media(max-width:640px){ dialog{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;margin:0} }
+  .dlgIn{display:flex;flex-direction:column;max-height:inherit;height:100%}
+  .dlgHead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .dlgHead h2{margin:0;font-size:17px}
+  .dlgBody{padding:16px;overflow:auto;flex:1}
+  .dlgFoot{padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap}
+  .dlgFoot .sp{flex:1}
+  .elist{list-style:none;margin:0;padding:0}
+  .elist li{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+  .elist li:hover{background:var(--field)}
+  .elist .c{font-size:12px;color:var(--muted);width:58px;flex:none}
+  .elist .nm{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .elist .nm small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+  .elist .ctc{font-variant-numeric:tabular-nums;font-size:14px}
+  .sect{font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:8px 0 10px}
+  .rev{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 42px;gap:8px;margin-bottom:8px}
+  .rev button{height:42px;padding:0}
+  button.danger{background:transparent;color:#c0392b;border:1px solid #e6b0aa}
+  button.small{height:36px;font-size:13px}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .tools button{height:36px;font-size:13px}
+  .req::after{content:' *';color:#c0392b}
+  body.locked .topbar, body.locked main, body.locked .dock{display:none !important}
+  body:not(.locked) #lock{display:none}
+  #lock{min-height:100dvh;display:grid;place-items:center;padding:24px 16px}
+  .lockCard{width:min(380px,100%);background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:28px 22px;box-shadow:var(--shadow);text-align:center}
+  .lockCard img{width:84px;height:84px;object-fit:contain;background:#fff;border-radius:16px;padding:6px;border:1px solid var(--line)}
+  .lockCard h1{font-size:16px;margin:14px 0 4px}
+  .lockCard p{color:var(--muted);font-size:13px;margin:0 0 18px}
+  .lockCard input[type=password]{height:48px;font-size:17px;text-align:center;letter-spacing:.12em}
+  .lockCard .chk{display:flex;align-items:center;gap:8px;justify-content:center;font-size:13px;color:var(--muted);margin:12px 0 16px}
+  .lockCard .chk input{width:16px;height:16px}
+  .lockCard button{width:100%;height:48px;font-size:15px}
+  .lockErr{color:#c0392b;font-size:13px;min-height:18px;margin-top:10px}
+  .lockBtn{margin-left:auto;height:36px;font-size:13px}
   @media print{
-    body{background:#fff}
-    header, .card:not(#resultCard), #resultCard > *:not(#slipWrap){display:none !important}
-    main{display:block;padding:0}
-    #resultCard{border:0;padding:0}
-    #payslip{border:0}
+    @page{size:A4;margin:0}
+    #lock{display:none !important}
+    dialog{display:none !important}
+    body{background:#fff;padding:0}
+    .topbar,.left,.previewHead,.dock{display:none !important}
+    main{display:block;padding:0;max-width:none}
+    .card{border:0;box-shadow:none;padding:0;background:none}
+    .stage{padding:0;background:none;border-radius:0}
+    .stageFit{height:auto !important}
+    .scaler{transform:none !important}
+    .sheet{box-shadow:none}
   }
 </style>
 </head>
-<body>
-<header>
-  <h1>CTC Calculator & Payslip</h1>
-  <p>Enter annual CTC and attendance. The breakup follows the payroll sheet rules; download the payslip as PDF.</p>
-</header>
+<body class="locked">
+<div id="lock">
+  <form class="lockCard" id="lockForm" autocomplete="on">
+    <img id="lockLogo" alt="">
+    <h1 id="lockName"></h1>
+    <p>Enter the password to open payroll</p>
+    <input type="text" name="username" value="payroll" autocomplete="username" hidden>
+    <input id="pw" type="password" autocomplete="current-password" placeholder="Password" required>
+    <label class="chk"><input id="remember" type="checkbox" checked> Remember on this device</label>
+    <button id="unlockBtn" type="submit">Unlock</button>
+    <div class="lockErr" id="lockErr"></div>
+  </form>
+</div>
+
+<div class="topbar"><div class="in">
+  <div class="mark"><img id="markImg" alt=""></div>
+  <div><h1 id="coTitle"></h1><p>Payroll &amp; payslips · FY April–March</p></div>
+  <button class="ghost lockBtn" onclick="lockApp()" title="Forget password on this device">Lock</button>
+</div></div>
 
 <main>
-  <!-- ================= INPUTS ================= -->
-  <section class="card">
-    <h2>Salary</h2>
-    <div class="field big">
-      <label for="annualCtc">Annual CTC (₹)</label>
-      <input id="annualCtc" type="number" inputmode="decimal" min="0" step="1000" value="525600">
-    </div>
-    <div class="grid2">
-      <div class="field">
-        <label for="month">Salary month</label>
-        <input id="month" type="month">
+  <div class="left">
+    <section class="card">
+      <p class="eyebrow">Payslip for</p>
+      <div class="banner" id="banner">
+        <b>Employee changes are saved on this device only.</b> To make them permanent for every device, download the app file and upload it to GitHub.
+        <div><button onclick="downloadAppFile()">Download app file</button></div>
       </div>
-      <div class="field">
-        <label for="daysInMonth">Days in month</label>
-        <input id="daysInMonth" type="number" min="1" max="31">
+      <div class="empRow">
+        <div class="f emp-big">
+          <label for="emp">Employee</label>
+          <select id="emp"></select>
+        </div>
+        <button class="ghost iconBtn" title="Manage employees" aria-label="Manage employees" onclick="openList()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+        </button>
       </div>
-      <div class="field">
-        <label for="workingDays">Working days</label>
-        <input id="workingDays" type="number" min="0" max="31">
+      <div class="g2">
+        <div class="f"><label for="month">Month</label><input id="month" type="month"></div>
+        <div class="f"><label for="lop">LOP days</label><input id="lop" type="number" inputmode="decimal" min="0" step="0.5" value="0"></div>
       </div>
-      <div class="field">
-        <label for="leaves">Leaves (LOP)</label>
-        <input id="leaves" type="number" min="0" step="0.5" value="0">
-      </div>
-    </div>
 
-    <details>
-      <summary>Other earnings & deductions</summary>
-      <div class="grid2">
-        <div class="field"><label for="arrears">Arrears</label><input id="arrears" type="number" min="0" value="0"></div>
-        <div class="field"><label for="advance">Advance</label><input id="advance" type="number" min="0" value="0"></div>
-        <div class="field"><label for="esi">ESI deduction</label><input id="esi" type="number" min="0" value="0"></div>
-        <div class="field"><label for="lwf">LWF</label><input id="lwf" type="number" min="0" value="0"></div>
-        <div class="field"><label for="esicEr">Employer ESIC</label><input id="esicEr" type="number" min="0" value="0"></div>
-      </div>
-    </details>
+      <details>
+        <summary>Adjustments <small>this month</small></summary>
+        <div class="g2">
+          <div class="f"><label for="arrDays">Arrear days</label><input id="arrDays" type="number" inputmode="decimal" min="0" step="0.5" value="0"></div>
+          <div class="f"><label for="lopr">LOP reversal days</label><input id="lopr" type="number" inputmode="decimal" min="0" step="0.5" value="0"></div>
+          <div class="f"><label for="tds">TDS override</label><input id="tds" type="number" inputmode="decimal" min="0" placeholder="Auto"></div>
+          <div class="f"><label for="advance">Salary advance</label><input id="advance" type="number" inputmode="decimal" min="0" value="0"></div>
+          <div class="f"><label for="esi">ESI</label><input id="esi" type="number" inputmode="decimal" min="0" value="0"></div>
+          <div class="f"><label for="lwf">LWF</label><input id="lwf" type="number" inputmode="decimal" min="0" value="0"></div>
+        </div>
+      </details>
 
-    <details>
-      <summary>Employee details (for payslip)</summary>
-      <div class="field"><label for="company">Company name</label><input id="company" placeholder="Your organisation name"></div>
-      <div class="field"><label for="companyAddr">Company address (optional)</label><input id="companyAddr"></div>
-      <div class="grid2">
-        <div class="field"><label for="empName">Employee name</label><input id="empName" placeholder="Full name"></div>
-        <div class="field"><label for="empCode">Employee no.</label><input id="empCode" placeholder="EMP001"></div>
-        <div class="field"><label for="designation">Designation</label><input id="designation" value="EMPLOYEE"></div>
-        <div class="field"><label for="func">Function</label><input id="func" placeholder="e.g. ACADEMICS"></div>
-        <div class="field"><label for="uan">UAN no.</label><input id="uan"></div>
-        <div class="field"><label for="pfNo">PF no.</label><input id="pfNo"></div>
-        <div class="field"><label for="esiNo">ESI no.</label><input id="esiNo"></div>
-        <div class="field"><label for="pan">PAN</label><input id="pan"></div>
-        <div class="field"><label for="doj">Date of joining</label><input id="doj" type="date"></div>
-        <div class="field"><label for="payMode">Payment mode</label>
-          <select id="payMode"><option>Bank</option><option>Cash</option><option>Cheque</option></select></div>
-        <div class="field"><label for="acct">Account no.</label><input id="acct"></div>
-      </div>
-    </details>
-  </section>
+      <details id="prevWrap">
+        <summary>Earlier months in this FY <small id="prevCount"></small></summary>
+        <p class="hint">Used for YTD and TDS. Blank LOP = full month. Blank TDS = auto-calculated; enter the actual amount if a different TDS was deducted.</p>
+        <table class="prev"><thead><tr><th>Month</th><th>LOP days</th><th>TDS</th></tr></thead><tbody id="prevBody"></tbody></table>
+      </details>
+    </section>
 
-  <!-- ================= RESULTS ================= -->
-  <section class="card" id="resultCard">
-    <h2>Breakup</h2>
-    <div class="kpis">
-      <div class="kpi"><span>Monthly CTC</span><b id="kCtc">–</b></div>
-      <div class="kpi"><span>Gross (rate)</span><b id="kGross">–</b></div>
-      <div class="kpi"><span>Net take-home</span><b id="kNet">–</b></div>
-      <div class="kpi"><span>Payable days</span><b id="kDays">–</b></div>
-    </div>
-
-    <div class="tables">
-      <div class="scroll">
-        <table>
-          <thead><tr><th>Earnings</th><th class="n">Rate</th><th class="n">Earned</th></tr></thead>
-          <tbody id="earnBody"></tbody>
-        </table>
+    <section class="net" id="netCard">
+      <div class="who" id="netWho"></div>
+      <div class="amt" id="netAmt"></div>
+      <div class="row">
+        <div>Earnings<b id="netEarn"></b></div>
+        <div>Deductions<b id="netDed"></b></div>
+        <div>Days paid<b id="netDays"></b></div>
       </div>
-      <div class="scroll">
-        <table>
-          <thead><tr><th>Deductions</th><th class="n">Amount</th></tr></thead>
-          <tbody id="dedBody"></tbody>
-        </table>
-        <table style="margin-top:14px">
-          <thead><tr><th>Employer cost</th><th class="n">Monthly</th><th class="n">Annual</th></tr></thead>
-          <tbody id="ctcBody"></tbody>
-        </table>
+    </section>
+
+    <section class="card">
+      <p class="eyebrow">Monthly CTC breakup</p>
+      <table class="bk" id="bk"></table>
+    </section>
+
+    <section class="card">
+      <p class="eyebrow">Income tax · new regime</p>
+      <table class="bk" id="taxTbl"></table>
+      <p class="hint" id="taxNote" style="margin:10px 0 0"></p>
+    </section>
+  </div>
+
+  <section class="card previewCard">
+    <div class="previewHead">
+      <p class="eyebrow" style="margin:0">Payslip preview</p>
+      <div class="actions">
+        <button class="ghost" onclick="doPrint()">Print</button>
+        <button class="dl" onclick="downloadPdf(this)">Download PDF</button>
       </div>
     </div>
-
-    <div class="btns">
-      <button id="btnPdf">Download payslip (PDF)</button>
-      <button id="btnPrint" class="ghost">Print</button>
-      <button id="btnToggle" class="ghost">Show payslip</button>
-    </div>
-    <p class="note">Rules: Gross = CTC − Employer PF · Basic = 50% of Gross · HRA = 40% of Basic · Other Allowance = balance · Earned = Rate ÷ Days × Payable days · Employee PF = 12% of earned Basic (max ₹3,000) · Employer PF = 6% of CTC÷1.06 (max ₹3,000) · PT = ₹200 if earnings ≥ ₹25,000.</p>
-
-    <div id="slipWrap" hidden>
-      <div id="payslip"></div>
-    </div>
+    <div class="stage"><div class="stageFit" id="stageFit"><div class="scaler" id="scaler">
+      <div class="sheet" id="sheet"></div>
+    </div></div></div>
   </section>
 </main>
 
+<dialog id="dlg"><div class="dlgIn" id="dlgIn"></div></dialog>
+<input type="file" id="restoreFile" accept=".json,application/json" hidden>
+
+<div class="dock">
+  <button class="ghost" onclick="doPrint()">Print</button>
+  <button class="dl" onclick="downloadPdf(this)">Download PDF</button>
+</div>
+
 <script>
-/* ===== Excel-compatible helpers ===== */
-// Excel ROUND: half away from zero, with a small epsilon to absorb float noise
-function xround(v, d = 0) {
-  const f = Math.pow(10, d);
-  const x = Math.abs(v) * f;
-  const r = Math.round(x + 1e-9) / f;
+/* ===================== helpers ===================== */
+const LOGO_EMBEDDED = 'data:image/jpeg;base64,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';
+const logoSrc = () => COMPANY.logo === 'LOGO_EMBEDDED' ? LOGO_EMBEDDED : COMPANY.logo;
+const $ = id => document.getElementById(id);
+const MONTHS = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+const SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function xround(v, d = 0) {                       // Excel ROUND (half away from zero)
+  const f = Math.pow(10, d), r = Math.round(Math.abs(v) * f + 1e-9) / f;
   return v < 0 ? -r : r;
 }
-const $ = id => document.getElementById(id);
-const num = id => { const v = parseFloat($(id).value); return isNaN(v) ? 0 : v; };
-const inr = (v, dp = 0) => '₹' + Number(v).toLocaleString('en-IN', { minimumFractionDigits: dp, maximumFractionDigits: dp });
-const fmt = (v, dp = 2) => Number(v).toLocaleString('en-IN', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+const money = v => Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const inr = v => '₹' + Number(v).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+const day1 = v => Number(v).toFixed(1);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dmy = iso => { if (!iso) return ''; const [y,m,d] = iso.split('-'); return `${d}-${m}-${y}`; };
+const daysIn = (y, m) => new Date(y, m, 0).getDate();      // m = 1..12
+const val = id => { const v = parseFloat($(id).value); return isNaN(v) ? 0 : v; };
 
-/* ===== Core calculation (mirrors the BANK sheet, one row) ===== */
-function calculate(inp) {
-  const K  = xround(inp.annualCtc / 12, 2);                               // Monthly CTC
-  const AL = xround(K / 1.06, 2) * 0.06 <= 3000 ? xround(K / 1.06 * 0.06, 2) : 3000; // Employer PF
-  const Q  = xround(K - AL, 2);                                            // Gross (rate)
-  const L  = xround(Q * 0.5, 2);                                           // Basic
-  const M  = xround(L * 0.4, 2);                                           // HRA
-  const N  = xround(Q - L - M, 2);                                         // Other allowance
-  const O = 0, P = 0;                                                      // Medical, CCA
-
-  const R = inp.daysInMonth, S = inp.workingDays, T = inp.leaves;
-  const U = S - T;                                                         // Payable days
-  const pr = rate => R > 0 ? xround(rate / R * U, 0) : 0;
-  const V = pr(L), W = pr(M), X = pr(N), Y = 0, Z = 0;
-  const AA = V + W + X + Y + Z;                                            // Earned gross
-  const AB = inp.arrears;
-  const AC = AA + AB;                                                      // Total earnings
-
-  const AD = Math.min(xround(V * 0.12, 0), 3000);                          // Employee PF
-  const AE = inp.esi;
-  const AF = AC >= 25000 ? 200 : 0;                                        // Professional tax
-  const AG = inp.lwf, AH = inp.advance;
-  const AI = AD + AE + AF + AG + AH;                                       // Total deductions
-  const AJ = AC - AI;                                                      // Net
-  const AM = inp.esicEr;
-  const AN = AC + AL + AM;                                                 // Total CTC (month)
-
-  return { monthlyCtc:K, erPf:AL, gross:Q, basic:L, hra:M, other:N, med:O, cca:P,
-           days:R, working:S, leaves:T, payable:U,
-           eBasic:V, eHra:W, eOther:X, eMed:Y, eCca:Z, earnedGross:AA, arrears:AB, totalEarn:AC,
-           eePf:AD, esi:AE, pt:AF, lwf:AG, advance:AH, totalDed:AI, net:AJ, esicEr:AM, totalCtc:AN };
+/* ============ salary rules (mirror the BANK sheet) ============ */
+function structure(annualCtc) {
+  const ctc  = xround(annualCtc / 12, 2);
+  const erPf = xround(ctc / 1.06, 2) * 0.06 <= 3000 ? xround(ctc / 1.06 * 0.06, 2) : 3000;
+  const gross = xround(ctc - erPf, 2);
+  const basic = xround(gross * 0.5, 2);
+  const hra   = xround(basic * 0.4, 2);
+  const other = xround(gross - basic - hra, 2);
+  return { ctc, erPf, gross, basic, hra, other };
+}
+// A = days in month, B = arrear days, C = LOP reversal days, D = LOP days
+function month(emp, y, m, o = {}) {
+  const s = structure(ctcFor(emp, y, m));
+  const A = daysIn(y, m), B = o.arr || 0, C = o.lopr || 0;
+  let D = o.lop || 0;
+  if (emp.doj) {                                   // not yet joined → treat as LOP
+    const [jy, jm, jd] = emp.doj.split('-').map(Number);
+    if (jy === y && jm === m) D += jd - 1;
+  }
+  const E = Math.max(0, A + B + C - D);
+  const pr = r => xround(r / A * E, 0);
+  const e = { basic: pr(s.basic), hra: pr(s.hra), other: pr(s.other) };
+  const totalEarn = e.basic + e.hra + e.other;
+  const d = {
+    pf: Math.min(xround(e.basic * 0.12, 0), 3000),
+    pt: totalEarn >= 25000 ? 200 : 0,
+    tds: o.tds || 0, esi: o.esi || 0, lwf: o.lwf || 0, advance: o.advance || 0
+  };
+  const totalDed = d.pf + d.pt + d.tds + d.esi + d.lwf + d.advance;
+  return { s, A, B, C, D, E, e, totalEarn, d, totalDed, net: totalEarn - totalDed };
 }
 
-/* ===== Amount in words (Indian system) ===== */
-function inWords(n) {
+/* ============ income tax (new regime) ============ */
+function slabTax(t) {
+  let tax = 0, prev = 0;
+  for (const [upto, r] of TAX.slabs) { if (t > prev) tax += (Math.min(t, upto) - prev) * r; prev = upto; }
+  return tax;
+}
+function incomeTax(annualGross) {
+  const taxable = Math.max(0, xround((annualGross - TAX.stdDeduction) / 10, 0) * 10);
+  const slab = slabTax(taxable);
+  let rebate = 0;
+  if (taxable <= TAX.rebateLimit) rebate = Math.min(slab, TAX.rebateMax);
+  else rebate = Math.max(0, slab - (taxable - TAX.rebateLimit));          // marginal relief
+  const tax = slab - rebate;
+  let sur = 0;
+  for (let i = TAX.surcharge.length - 1; i >= 0; i--) {
+    const [th, rate] = TAX.surcharge[i];
+    if (taxable > th) {
+      const lower = i > 0 ? TAX.surcharge[i - 1][1] : 0;
+      const cap = slabTax(th) * (1 + lower) + (taxable - th) - tax;        // surcharge marginal relief
+      sur = Math.max(0, Math.min(tax * rate, cap));
+      break;
+    }
+  }
+  const cess = (tax + sur) * TAX.cess;
+  return { gross: annualGross, taxable, slab, rebate, sur, cess, total: xround(tax + sur + cess, 0) };
+}
+
+/* ===================== amount in words ===================== */
+function words(n) {
   n = Math.round(n);
-  if (n === 0) return 'Zero';
   const a = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
   const b = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
-  const two = x => x < 20 ? a[x] : b[Math.floor(x/10)] + (x%10 ? ' ' + a[x%10] : '');
-  const three = x => (x >= 100 ? a[Math.floor(x/100)] + ' Hundred' + (x%100 ? ' ' : '') : '') + (x%100 ? two(x%100) : '');
+  const two = x => x < 20 ? a[x] : b[Math.floor(x / 10)] + (x % 10 ? ' ' + a[x % 10] : '');
+  if (n === 0) return 'Zero';
   const parts = [];
-  const crore = Math.floor(n / 1e7); n %= 1e7;
-  const lakh = Math.floor(n / 1e5); n %= 1e5;
-  const thou = Math.floor(n / 1e3); n %= 1e3;
-  if (crore) parts.push(inWords(crore) + ' Crore');
-  if (lakh) parts.push(two(lakh) + ' Lakh');
-  if (thou) parts.push(two(thou) + ' Thousand');
-  if (n) parts.push(three(n));
+  const cr = Math.floor(n / 1e7), lk = Math.floor(n / 1e5) % 100, th = Math.floor(n / 1e3) % 100, hu = Math.floor(n / 100) % 10, rest = n % 100;
+  if (cr) parts.push((cr > 99 ? words(cr) : two(cr)) + ' Crore');
+  if (lk) parts.push(two(lk) + ' Lakh');
+  if (th) parts.push(two(th) + ' Thousand');
+  if (hu) parts.push(a[hu] + ' Hundred');
+  if (rest) parts.push((parts.length ? 'and ' : '') + two(rest));
   return parts.join(' ');
 }
 
-/* ===== UI ===== */
-function readInputs() {
-  return {
-    annualCtc: num('annualCtc'), daysInMonth: num('daysInMonth'), workingDays: num('workingDays'),
-    leaves: num('leaves'), arrears: num('arrears'), advance: num('advance'),
-    esi: num('esi'), lwf: num('lwf'), esicEr: num('esicEr')
-  };
+/* ===================== state & UI ===================== */
+const prevInputs = {};   // key 'CODE|YYYY-M' -> {lop, tds}
+const LS_KEY = 'osprzet-payroll-employees-v2';     // encrypted device edits
+const LS_OLD = 'osprzet-payroll-employees-v1';     // plain edits from the earlier version
+const KEY_LS = 'osprzet-payroll-key-v1';
+let FILE_JSON = '[]', employees = [], KEY = null;
+
+/* ---- crypto (AES-GCM, key from password via PBKDF2) ---- */
+const b64 = u => { let s = ''; new Uint8Array(u).forEach(c => s += String.fromCharCode(c)); return btoa(s); };
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function deriveKey(pw) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: unb64(EMPLOYEES_ENC.salt), iterations: EMPLOYEES_ENC.iter, hash: 'SHA-256' },
+    base, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+}
+async function decryptWith(key, o) {
+  return new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(o.iv) }, key, unb64(o.ct)));
+}
+async function encryptWith(key, text) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(text));
+  return { iv: b64(iv), ct: b64(ct) };
 }
 
-function setMonthDefaults() {
-  const [y, m] = $('month').value.split('-').map(Number);
-  if (!y || !m) return;
-  const d = new Date(y, m, 0).getDate();
-  $('daysInMonth').value = d;
-  $('workingDays').value = d;
+async function loadEmployees() {
+  const fromFile = () => JSON.parse(FILE_JSON);
+  try {
+    const old = localStorage.getItem(LS_OLD);              // migrate plain edits, then wipe them
+    if (old) {
+      localStorage.removeItem(LS_OLD);
+      const st = JSON.parse(old);
+      if (st && Array.isArray(st.data) && st.data.length && JSON.stringify(st.data) !== FILE_JSON) {
+        employees = st.data; await saveLocal(); return st.data;
+      }
+    }
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      const st = JSON.parse(raw);
+      const data = JSON.parse(await decryptWith(KEY, st.enc));
+      if (Array.isArray(data) && data.length) {
+        if (st.base === EMPLOYEES_ENC.ct) return data;       // edits made on top of this file
+        if (st.dirty && confirm('This device has employee changes that were never uploaded, and the app file has since been updated. Keep this device\'s version? (Cancel = use the app file)')) return data;
+      }
+      localStorage.removeItem(LS_KEY);
+    }
+  } catch (e) {}
+  return fromFile();
+}
+async function saveLocal() {
+  try {
+    const enc = await encryptWith(KEY, JSON.stringify(employees));
+    localStorage.setItem(LS_KEY, JSON.stringify({ base: EMPLOYEES_ENC.ct, dirty: isDirty(), enc }));
+  } catch (e) {}
+}
+function saveEmployees() {
+  employees.sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+  saveLocal();
+  refreshEmpSelect(); updateBanner(); buildPrev(); render();
+}
+const isDirty = () => JSON.stringify(employees) !== FILE_JSON;
+function updateBanner() { $('banner').classList.toggle('on', isDirty()); }
+function refreshEmpSelect(keep) {
+  const cur = keep || $('emp').value;
+  $('emp').innerHTML = employees.map(e => `<option value="${esc(e.code)}">${esc(e.code)} — ${esc(e.name)}</option>`).join('');
+  if (employees.some(e => e.code === cur)) $('emp').value = cur;
+}
+const employee = () => ({ ...EMP_DEFAULTS, ...(employees.find(e => e.code === $('emp').value) || employees[0]) });
+function ctcFor(emp, y, m) {                       // CTC effective for a month (revisions apply from their month)
+  const ym = `${y}-${String(m).padStart(2, '0')}`;
+  let ctc = Number(emp.annualCtc) || 0;
+  [...(emp.revisions || [])].sort((a, b) => a.from.localeCompare(b.from)).forEach(r => { if (r.from <= ym) ctc = Number(r.annualCtc) || 0; });
+  return ctc;
+}
+const pkey = (p) => `${$('emp').value}|${p.y}-${p.m}`;
+function selYM() { const [y, m] = $('month').value.split('-').map(Number); return { y, m }; }
+function fyMonths(y, m) {                          // earlier months of the FY (April start)
+  const fyStart = m >= 4 ? y : y - 1, list = [];
+  let cy = fyStart, cm = 4;
+  while (!(cy === y && cm === m)) { list.push({ y: cy, m: cm }); cm++; if (cm > 12) { cm = 1; cy++; } }
+  return list;
 }
 
-function monthLabel() {
-  const [y, m] = ($('month').value || '').split('-').map(Number);
-  if (!y) return '';
-  return new Date(y, m - 1, 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+function buildPrev() {
+  const { y, m } = selYM();
+  const list = fyMonths(y, m);
+  $('prevCount').textContent = list.length ? `${list.length} month${list.length > 1 ? 's' : ''}` : 'none (April)';
+  $('prevBody').innerHTML = list.map(p => {
+    const k = pkey(p), v = prevInputs[k] || {};
+    return `<tr><td>${SHORT[p.m - 1]} ${p.y}</td>
+      <td><input type="number" inputmode="decimal" min="0" step="0.5" data-k="${k}" data-f="lop" value="${v.lop ?? ''}" placeholder="0"></td>
+      <td><input type="number" inputmode="decimal" min="0" data-k="${k}" data-f="tds" value="${v.tds ?? ''}" placeholder="Auto"></td></tr>`;
+  }).join('') || '<tr><td colspan="3" style="color:var(--muted)">April is the first month of the FY, so YTD = this month.</td></tr>';
+  $('prevBody').querySelectorAll('input').forEach(i => i.addEventListener('input', () => {
+    const k = i.dataset.k; prevInputs[k] = prevInputs[k] || {};
+    prevInputs[k][i.dataset.f] = i.value === '' ? undefined : parseFloat(i.value);
+    render();
+  }));
 }
 
-let last = null;
-function render() {
-  const r = calculate(readInputs());
-  last = r;
-  $('kCtc').textContent = inr(r.monthlyCtc, 2);
-  $('kGross').textContent = inr(r.gross, 2);
-  $('kNet').textContent = inr(r.net);
-  $('kDays').textContent = `${r.payable} / ${r.days}`;
-
-  const row = (l, a, b) => `<tr><td>${l}</td><td class="n">${a}</td>${b !== undefined ? `<td class="n">${b}</td>` : ''}</tr>`;
-  const tot = (l, a, b) => `<tr class="tot"><td>${l}</td><td class="n">${a}</td>${b !== undefined ? `<td class="n">${b}</td>` : ''}</tr>`;
-
-  $('earnBody').innerHTML =
-    row('Basic', fmt(r.basic), fmt(r.eBasic, 0)) +
-    row('HRA', fmt(r.hra), fmt(r.eHra, 0)) +
-    row('Other allowance', fmt(r.other), fmt(r.eOther, 0)) +
-    row('Medical allowance', fmt(r.med), fmt(r.eMed, 0)) +
-    row('CCA', fmt(r.cca), fmt(r.eCca, 0)) +
-    (r.arrears ? row('Arrears', '–', fmt(r.arrears, 0)) : '') +
-    tot('Total', fmt(r.gross), fmt(r.totalEarn, 0));
-
-  $('dedBody').innerHTML =
-    row('Employee PF', fmt(r.eePf, 0)) +
-    row('ESI', fmt(r.esi, 0)) +
-    row('Professional tax', fmt(r.pt, 0)) +
-    row('LWF', fmt(r.lwf, 0)) +
-    row('Advance', fmt(r.advance, 0)) +
-    tot('Total deductions', fmt(r.totalDed, 0)) +
-    tot('Net pay', fmt(r.net, 0));
-
-  $('ctcBody').innerHTML =
-    row('Earned gross + arrears', fmt(r.totalEarn), fmt(r.totalEarn * 12)) +
-    row('Employer PF', fmt(r.erPf), fmt(r.erPf * 12)) +
-    row('Employer ESIC', fmt(r.esicEr), fmt(r.esicEr * 12)) +
-    tot('Total CTC', fmt(r.totalCtc), fmt(r.totalCtc * 12));
-
-  renderPayslip(r);
+function fyAll(y, m) {                             // all 12 months of the FY (April–March)
+  const fs = m >= 4 ? y : y - 1, list = [];
+  for (let i = 0; i < 12; i++) { const mm = (3 + i) % 12 + 1; list.push({ y: mm >= 4 ? fs : fs + 1, m: mm }); }
+  return list;
 }
+const optNum = id => $(id).value === '' ? undefined : parseFloat($(id).value);
 
-function renderPayslip(r) {
-  const v = id => esc($(id).value);
-  const doj = $('doj').value ? new Date($('doj').value).toLocaleDateString('en-IN') : '';
-  $('payslip').innerHTML = `
-    <h3>${v('company') || 'Company Name'}</h3>
-    ${$('companyAddr').value ? `<div class="sub">${v('companyAddr')}</div>` : ''}
-    <div class="title">PAY SLIP${monthLabel() ? ' — ' + esc(monthLabel()) : ''}</div>
-    <table>
-      <tr><td class="lbl">Employee Name</td><td>${v('empName')}</td><td class="lbl">UAN No</td><td>${v('uan')}</td></tr>
-      <tr><td class="lbl">Employee Number</td><td>${v('empCode')}</td><td class="lbl">PF No</td><td>${v('pfNo')}</td></tr>
-      <tr><td class="lbl">Designation</td><td>${v('designation')}</td><td class="lbl">ESI No</td><td>${v('esiNo')}</td></tr>
-      <tr><td class="lbl">Function</td><td>${v('func')}</td><td class="lbl">PAN</td><td>${v('pan')}</td></tr>
-      <tr><td class="lbl">Date of Joining</td><td>${doj}</td><td class="lbl">Payment Mode</td><td>${v('payMode')}</td></tr>
-      <tr><td class="lbl">Working Days</td><td>${r.working}</td><td class="lbl">Account Number</td><td>${v('acct')}</td></tr>
-      <tr><td class="lbl">Leave</td><td>${r.leaves}</td><td class="lbl">Gross Salary</td><td>${fmt(r.totalEarn, 0)}</td></tr>
-      <tr><td class="lbl">Payable Days</td><td>${r.payable}</td><td class="lbl">Monthly CTC</td><td>${fmt(r.monthlyCtc)}</td></tr>
-    </table>
-    <table style="margin-top:12px">
-      <tr><th>Earnings</th><th style="text-align:right">Rate of Wages</th><th style="text-align:right">Earned Wages</th><th>Deductions</th><th style="text-align:right">Amount</th></tr>
-      <tr><td>Basic Salary</td><td class="n">${fmt(r.basic)}</td><td class="n">${fmt(r.eBasic,0)}</td><td>PF</td><td class="n">${fmt(r.eePf,0)}</td></tr>
-      <tr><td>HRA</td><td class="n">${fmt(r.hra)}</td><td class="n">${fmt(r.eHra,0)}</td><td>ESI</td><td class="n">${fmt(r.esi,0)}</td></tr>
-      <tr><td>Other Allowance</td><td class="n">${fmt(r.other)}</td><td class="n">${fmt(r.eOther,0)}</td><td>PT</td><td class="n">${fmt(r.pt,0)}</td></tr>
-      <tr><td>Medical Allowance</td><td class="n">${fmt(r.med)}</td><td class="n">${fmt(r.eMed,0)}</td><td>Advance</td><td class="n">${fmt(r.advance,0)}</td></tr>
-      <tr><td>Arrears / Other</td><td class="n">0.00</td><td class="n">${fmt(r.arrears,0)}</td><td>LWF</td><td class="n">${fmt(r.lwf,0)}</td></tr>
-      <tr class="net"><td>Total Gross</td><td class="n">${fmt(r.gross)}</td><td class="n">${fmt(r.totalEarn,0)}</td><td>Total Deductions</td><td class="n">${fmt(r.totalDed,0)}</td></tr>
-      <tr class="net"><td>Net Payable</td><td colspan="4">₹ ${fmt(r.net,0)} &nbsp;(Rupees ${inWords(r.net)} Only)</td></tr>
-    </table>
-    <div class="foot">Signature is not required, this is a computer generated slip.</div>`;
-}
+function compute() {
+  const emp = employee(), { y, m } = selYM();
+  const months = fyAll(y, m), idx = months.findIndex(p => p.y === y && p.m === m);
+  const joinKey = emp.doj ? (([jy, jm]) => jy * 12 + jm)(emp.doj.split('-').map(Number)) : 0;
+  const employed = p => p.y * 12 + p.m >= joinKey;
 
-function downloadPdf() {
-  const wrap = $('slipWrap');
-  const wasHidden = wrap.hidden;
-  wrap.hidden = false;
-  const name = ($('empCode').value || $('empName').value || 'payslip').replace(/\s+/g, '_');
-  const file = `Payslip_${name}_${$('month').value || ''}.pdf`;
-  if (typeof html2pdf === 'undefined') { window.print(); wrap.hidden = wasHidden; return; }
-  // Render from a clean off-screen copy so page scroll/overflow can't blank the PDF
-  const clone = $('payslip').cloneNode(true);
-  $('payslip').id = 'payslipLive';                               // clone keeps id="payslip" for styling
-  clone.style.cssText = 'width:100%;max-width:none;border:0;padding:8px;margin:0';
-  const restore = () => { $('payslipLive').id = 'payslip'; wrap.hidden = wasHidden; };
-  html2pdf().set({
-    margin: 10, filename: file,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  }).from(clone).save().then(restore, restore);
-}
-
-// Init
-(function init() {
-  const now = new Date();
-  $('month').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  setMonthDefaults();
-  $('month').addEventListener('change', () => { setMonthDefaults(); render(); });
-  document.querySelectorAll('input, select').forEach(el => el.addEventListener('input', render));
-  $('btnPdf').addEventListener('click', downloadPdf);
-  $('btnPrint').addEventListener('click', () => { $('slipWrap').hidden = false; $('btnToggle').textContent = 'Hide payslip'; window.print(); });
-  $('btnToggle').addEventListener('click', () => {
-    const w = $('slipWrap'); w.hidden = !w.hidden;
-    $('btnToggle').textContent = w.hidden ? 'Show payslip' : 'Hide payslip';
+  // actual earnings for April..current, full-month projection for the rest
+  const actual = months.map((p, i) => {
+    if (i > idx || !employed(p)) return null;
+    if (i === idx) return month(emp, p.y, p.m, { lop: val('lop'), arr: val('arrDays'), lopr: val('lopr'),
+      advance: val('advance'), esi: val('esi'), lwf: val('lwf') });
+    const v = prevInputs[pkey(p)] || {};
+    return month(emp, p.y, p.m, { lop: v.lop || 0 });
   });
-  render();
+  const projected = months.map(p => employed(p) ? month(emp, p.y, p.m, {}).totalEarn : 0);
+
+  // TDS month by month: (annual tax on projected salary − TDS already deducted) ÷ months left
+  let paid = 0, tax = null;
+  for (let i = 0; i <= idx; i++) {
+    const r = actual[i]; if (!r) continue;
+    let proj = 0;
+    for (let j = 0; j < 12; j++) proj += j <= i ? (actual[j] ? actual[j].totalEarn : 0) : projected[j];
+    const t = incomeTax(proj);
+    const left = months.slice(i).filter(employed).length;
+    const auto = Math.max(0, xround((t.total - paid) / left, 0));
+    const ovr = i === idx ? optNum('tds') : (prevInputs[pkey(months[i])] || {}).tds;
+    const tds = ovr !== undefined && !isNaN(ovr) ? ovr : auto;
+    if (i === idx) tax = { ...t, paidBefore: paid, left, auto, overridden: ovr !== undefined && !isNaN(ovr) };
+    r.d.tds = tds; r.totalDed += tds; r.net -= tds; paid += tds;
+  }
+
+  const cur = actual[idx];
+  const ytd = { e: { basic: 0, hra: 0, other: 0 }, d: { pf: 0, pt: 0, tds: 0, esi: 0, lwf: 0, advance: 0 }, totalEarn: 0, totalDed: 0 };
+  for (let i = 0; i <= idx; i++) {
+    const r = actual[i]; if (!r) continue;
+    for (const k in r.e) ytd.e[k] += r.e[k];
+    for (const k in r.d) ytd.d[k] += r.d[k];
+    ytd.totalEarn += r.totalEarn; ytd.totalDed += r.totalDed;
+  }
+  return { emp, y, m, cur, ytd, tax, months, idx };
+}
+
+function render() {
+  const R = compute(), { emp, cur } = R;
+  $('netWho').textContent = `${emp.name} · ${SHORT[R.m - 1]} ${R.y}`;
+  $('netAmt').textContent = inr(cur.net);
+  $('netEarn').textContent = inr(cur.totalEarn);
+  $('netDed').textContent = inr(cur.totalDed);
+  $('netDays').textContent = `${cur.E} / ${cur.A}`;
+  const s = cur.s;
+  $('bk').innerHTML = [
+    ['Basic', s.basic], ['House rent allowance', s.hra], ['Other allowance', s.other],
+    ['Gross salary', s.gross], ['Employer PF', s.erPf], ['Monthly CTC', s.ctc]
+  ].map(([l, v]) => `<tr><td>${l}</td><td class="n">${money(v)}</td></tr>`).join('') +
+  `<tr><td>Annual CTC${(emp.revisions || []).length ? ' (' + SHORT[R.m - 1] + ' ' + R.y + ')' : ''}</td><td class="n">${money(ctcFor(emp, R.y, R.m))}</td></tr>`;
+  const t = R.tax, fs = R.months[0].y;
+  const prevLbl = R.idx > 0 ? `TDS deducted Apr–${SHORT[R.months[R.idx - 1].m - 1]}` : 'TDS deducted earlier';
+  $('taxTbl').innerHTML = [
+    ['Projected salary FY ' + fs + '-' + String(fs + 1).slice(2), money(t.gross)],
+    ['Standard deduction', '− ' + money(TAX.stdDeduction)],
+    ['Taxable income', money(t.taxable)],
+    ['Tax on slabs', money(t.slab)],
+    ...(t.rebate ? [[t.taxable <= TAX.rebateLimit ? 'Rebate (income ≤ ₹12L)' : 'Marginal relief', '− ' + money(t.rebate)]] : []),
+    ...(t.sur ? [['Surcharge', money(t.sur)]] : []),
+    ['Health & education cess 4%', money(t.cess)],
+    ['Annual tax', money(t.total)],
+    [prevLbl, money(t.paidBefore)],
+    ['Months left incl. this', t.left],
+    ['TDS this month' + (t.overridden ? ' (override)' : ''), money(cur.d.tds)]
+  ].map(([l, v]) => `<tr><td>${l}</td><td class="n">${v}</td></tr>`).join('');
+  $('taxNote').textContent = (t.total === 0 ? 'No tax payable — TDS not applicable. ' : '') +
+    'Employer PF is excluded from income; professional tax is not deductible under the new regime.' +
+    (fs < 2025 || fs > 2026 ? ` Note: FY 2026-27 rates applied to FY ${fs}-${String(fs + 1).slice(2)}.` : '');
+  $('sheet').innerHTML = slipHtml(R);
+  fit();
+}
+
+function slipHtml({ emp, y, m, cur, ytd }) {
+  const E = esc;
+  const logo = COMPANY.logo ? `<img src="${logoSrc()}" alt="">` : '<div class="ph"></div>';
+  const earnRows = [
+    ['Basic', cur.e.basic, ytd.e.basic],
+    ['House Rent Allowance', cur.e.hra, ytd.e.hra],
+    ['Other Allowance', cur.e.other, ytd.e.other]
+  ];
+  const dedAll = [
+    ['Provident Fund', 'pf', true], ['Professional Tax', 'pt', true], ['ESI', 'esi'],
+    ['Labour Welfare Fund', 'lwf'], ['Salary Advance', 'advance'], ['Income Tax', 'tds']
+  ];
+  const dedRows = dedAll.filter(([, k, always]) => always || cur.d[k] || ytd.d[k]).map(([l, k]) => [l, cur.d[k], ytd.d[k]]);
+  const n = Math.max(earnRows.length, dedRows.length, 6);
+  let body = '';
+  for (let i = 0; i < n; i++) {
+    const e = earnRows[i], d = dedRows[i];
+    body += `<tr><td>${e ? e[0] : '&nbsp;'}</td><td class="r">${e ? money(e[1]) : ''}</td><td class="r">${e ? money(e[2]) : ''}</td>
+      <td>${d ? d[0] : ''}</td><td class="r">${d ? money(d[1]) : ''}</td><td class="r">${d ? money(d[2]) : ''}</td></tr>`;
+  }
+  const today = new Date(), gen = `${String(today.getDate()).padStart(2,'0')}/${String(today.getMonth()+1).padStart(2,'0')}/${today.getFullYear()}`;
+  return `<div class="slip">
+  <div class="box">
+    <div class="hdr">
+      <div class="logo">${logo}</div>
+      <div class="co">
+        <div class="nm">${E(COMPANY.name)}</div>
+        ${COMPANY.addressLines.map(l => `<div>${E(l)}</div>`).join('')}
+        <div class="tt">PAYSLIP FOR THE MONTH OF ${MONTHS[m - 1]}&nbsp; ${y}</div>
+      </div>
+    </div>
+    <table class="info">
+      <colgroup><col style="width:12.3%"><col style="width:21.7%"><col style="width:13.7%"><col style="width:24%"><col style="width:13%"><col style="width:15.3%"></colgroup>
+      <tr><td class="l">Emp Code</td><td>${E(emp.code)}</td><td class="l">Emp Name</td><td>${E(emp.name)}</td><td></td><td></td></tr>
+      <tr><td class="l">Department</td><td>${E(emp.department)}</td><td class="l">Cost Center</td><td>${E(emp.costCenter)}</td><td class="l">PF No.</td><td>${E(emp.pfNo)}</td></tr>
+      <tr><td class="l">Location</td><td>${E(emp.location)}</td><td class="l">Designation</td><td>${E(emp.designation)}</td><td class="l">ESI No.</td><td>${E(emp.esiNo)}</td></tr>
+      <tr><td class="l">Date of Birth</td><td>${dmy(emp.dob)}</td><td class="l">Bank A/c No</td><td>${E(emp.bankAc)}</td><td class="l">Pan No.</td><td>${E(emp.pan)}</td></tr>
+      <tr><td class="l">Date of Joining</td><td>${dmy(emp.doj)}</td><td class="l">Gender</td><td>${E(emp.gender)}</td><td class="l">EPS No.</td><td>${E(emp.epsNo)}</td></tr>
+      <tr><td class="l">UAN</td><td>${E(emp.uan)}</td><td class="l">Global Date of Joining</td><td>${dmy(emp.doj)}</td><td></td><td></td></tr>
+    </table>
+    <div class="gap"></div>
+    <table class="earn">
+      <colgroup><col style="width:25.5%"><col style="width:12.3%"><col style="width:12%"><col style="width:25.2%"><col style="width:12.5%"><col style="width:12.5%"></colgroup>
+      <tr><th>Earnings</th><th class="r">Amount</th><th class="r">YTD</th><th>Deductions</th><th class="r">Amount</th><th class="r">YTD</th></tr>
+      ${body}
+      <tr class="tot"><td class="lb">Total Earnings</td><td class="r">${money(cur.totalEarn)}</td><td class="r">${money(ytd.totalEarn)}</td>
+        <td class="lb">Total Deductions</td><td class="r">${money(cur.totalDed)}</td><td class="r">${money(ytd.totalDed)}</td></tr>
+    </table>
+    <div class="gap"></div>
+    <div class="netrow"><span>Net Pay :</span> Rs. ${money(cur.net)}</div>
+    <div class="netrow"><span>In Words</span> Rupees ${words(cur.net)} Only.</div>
+    <div class="gap" style="border-bottom:0"></div>
+  </div>
+  <table class="days">
+    <tr><th>Days In Month (A)</th><th>Arrear Days (B)</th><th>LOPR Days(C)</th><th>LOP Days (D)</th><th>Net Days Worked<br>(E = A + B + C - D)</th></tr>
+    <tr><td>${day1(cur.A)}</td><td>${day1(cur.B)}</td><td>${day1(cur.C)}</td><td>${day1(cur.D)}</td><td>${day1(cur.E)}</td></tr>
+  </table>
+  <div class="foot">This document contains confidential information. If you are not the intended recipient you are not authorized to use or disclose it in any form.<br>
+  If you received this in error please destroy it along with any copies and notify the sender immediately.<br>${gen}</div>
+</div>`;
+}
+
+/* ============ preview scaling (sheet stays true A4) ============ */
+function fit() {
+  const stage = $('stageFit'), sheet = $('sheet');
+  const avail = stage.parentElement.clientWidth - 24;
+  const sc = Math.min(1, avail / sheet.offsetWidth);
+  $('scaler').style.transform = `scale(${sc})`;
+  stage.style.height = sheet.offsetHeight * sc + 'px';
+}
+window.addEventListener('resize', fit);
+
+function fileName() {
+  const { emp, y, m } = { emp: employee(), ...selYM() };
+  return `Payslip_${emp.code}_${emp.name.replace(/\s+/g, '_')}_${SHORT[m - 1]}${y}.pdf`;
+}
+function doPrint() {
+  const old = document.title; document.title = fileName().replace('.pdf', '');
+  window.print(); setTimeout(() => document.title = old, 500);
+}
+function downloadPdf(btn) {
+  if (typeof html2pdf === 'undefined') return doPrint();
+  const clone = $('sheet').cloneNode(true);
+  clone.removeAttribute('id'); clone.style.boxShadow = 'none';
+  clone.style.height = '296mm'; clone.style.overflow = 'hidden';   // keep it to one page
+  document.querySelectorAll('button.dl').forEach(b => { b.disabled = true; b.textContent = 'Preparing…'; });
+  const done = () => document.querySelectorAll('button.dl').forEach(b => { b.disabled = false; b.textContent = 'Download PDF'; });
+  html2pdf().set({
+    margin: 0, filename: fileName(),
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2.5, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true }
+  }).from(clone).save().then(done, done);
+}
+
+/* ===================== employee manager ===================== */
+const FIELDS = [
+  ['code', 'Employee code', 'text', true], ['name', 'Name', 'text', true],
+  ['designation', 'Designation'], ['annualCtc', 'Annual CTC (₹)', 'number', true],
+  ['department', 'Department'], ['location', 'Location'],
+  ['doj', 'Date of joining', 'date'], ['dob', 'Date of birth', 'date'],
+  ['gender', 'Gender', 'select'], ['costCenter', 'Cost center'],
+  ['pan', 'PAN'], ['uan', 'UAN'], ['pfNo', 'PF No.'], ['esiNo', 'ESI No.'],
+  ['epsNo', 'EPS No.'], ['bankAc', 'Bank A/c No']
+];
+const dlg = () => $('dlg');
+function showDlg(html) { $('dlgIn').innerHTML = html; if (!dlg().open) dlg().showModal(); }
+function closeDlg() { dlg().close(); }
+
+function openList() {
+  showDlg(`
+    <div class="dlgHead"><h2>Employees (${employees.length})</h2>
+      <div style="display:flex;gap:8px"><button class="small" onclick="openForm()">+ Add</button><button class="ghost small" onclick="closeDlg()">Close</button></div></div>
+    <div class="dlgBody">
+      <ul class="elist">${employees.map(e => `
+        <li onclick="openForm('${esc(e.code)}')"><span class="c">${esc(e.code)}</span>
+          <span class="nm">${esc(e.name)}<small>${esc(e.designation || '')}${(e.revisions || []).length ? ' · revised' : ''}</small></span>
+          <span class="ctc">${inr(ctcFor(e, ...todayYM()))}</span></li>`).join('')}
+      </ul>
+      <p class="sect" style="margin-top:20px">Save & share</p>
+      <p class="hint" style="margin:0">Changes are stored on this device. <b>Download app file</b> gives you an updated index.html with the employee list built in — upload it to GitHub to make it permanent for everyone. Backup/restore moves data between devices.</p>
+      <div class="tools">
+        <button onclick="downloadAppFile()">Download app file</button>
+        <button class="ghost" onclick="backupJson()">Backup (JSON)</button>
+        <button class="ghost" onclick="$('restoreFile').click()">Restore</button>
+        ${isDirty() ? '<button class="danger" onclick="resetToFile()">Discard device changes</button>' : ''}
+      </div>
+    </div>`);
+}
+const todayYM = () => { const d = new Date(); return [d.getFullYear(), d.getMonth() + 1]; };
+function nextCode() {
+  const n = employees.map(e => parseInt(String(e.code).replace(/\D/g, ''), 10)).filter(x => !isNaN(x));
+  return 'EMP' + String((n.length ? Math.max(...n) : 0) + 1).padStart(3, '0');
+}
+
+let editing = null;   // original code, or null for new
+let revDraft = [];
+function openForm(code) {
+  editing = code || null;
+  const e = code ? { ...EMP_DEFAULTS, ...employees.find(x => x.code === code) } : { ...EMP_DEFAULTS, code: nextCode(), name: '', designation: 'EMPLOYEE', annualCtc: '' };
+  revDraft = (e.revisions || []).map(r => ({ ...r }));
+  const field = ([k, label, type = 'text', req]) => {
+    const v = e[k] ?? '';
+    const input = type === 'select'
+      ? `<select id="f_${k}">${['', 'M', 'F', 'Other'].map(o => `<option ${o === v ? 'selected' : ''}>${o}</option>`).join('')}</select>`
+      : `<input id="f_${k}" type="${type}" ${type === 'number' ? 'inputmode="numeric" min="0" step="1000"' : ''} value="${esc(v)}">`;
+    return `<div class="f"><label for="f_${k}" class="${req ? 'req' : ''}">${label}</label>${input}</div>`;
+  };
+  showDlg(`
+    <div class="dlgHead"><h2>${code ? 'Edit ' + esc(e.name) : 'Add employee'}</h2><button class="ghost small" onclick="openList()">Back</button></div>
+    <div class="dlgBody">
+      <div class="g2">${FIELDS.slice(0, 4).map(field).join('')}</div>
+      <p class="sect">Salary revisions</p>
+      <p class="hint">Annual CTC above applies until the first revision. A revision applies from its month onwards, so earlier payslips, YTD and TDS stay correct. To simply correct the CTC for all months, edit the field above instead.</p>
+      <div id="revs"></div>
+      <button class="ghost small" onclick="addRev()">+ Add revision</button>
+      <p class="sect" style="margin-top:20px">Payslip details</p>
+      <div class="g2">${FIELDS.slice(4).map(field).join('')}</div>
+      <p class="hint" id="formErr" style="color:#c0392b"></p>
+    </div>
+    <div class="dlgFoot">
+      ${code ? '<button class="danger" onclick="delEmp()">Delete</button>' : ''}
+      <span class="sp"></span>
+      <button class="ghost" onclick="openList()">Cancel</button>
+      <button onclick="saveEmp()">Save</button>
+    </div>`);
+  drawRevs();
+}
+function drawRevs() {
+  $('revs').innerHTML = revDraft.map((r, i) => `
+    <div class="rev">
+      <div><label>Effective from</label><input type="month" value="${esc(r.from || '')}" oninput="revDraft[${i}].from=this.value"></div>
+      <div><label>New annual CTC (₹)</label><input type="number" inputmode="numeric" min="0" step="1000" value="${esc(r.annualCtc ?? '')}" oninput="revDraft[${i}].annualCtc=this.value===''?'':Number(this.value)"></div>
+      <div><label>&nbsp;</label><button class="danger" aria-label="Remove revision" onclick="revDraft.splice(${i},1);drawRevs()">✕</button></div>
+    </div>`).join('');
+}
+function addRev() { const [y, m] = todayYM(); revDraft.push({ from: `${y}-${String(m).padStart(2, '0')}`, annualCtc: '' }); drawRevs(); }
+function saveEmp() {
+  const rec = {};
+  for (const [k, , type] of FIELDS) {
+    let v = $('f_' + k).value.trim();
+    if (type === 'number') v = v === '' ? '' : Number(v);
+    if (k === 'pan') v = v.toUpperCase();
+    if (v !== '' && v !== EMP_DEFAULTS[k]) rec[k] = v;
+  }
+  const err = msg => { $('formErr').textContent = msg; return false; };
+  if (!rec.code) return err('Employee code is required.');
+  if (!rec.name) return err('Name is required.');
+  if (!(rec.annualCtc > 0)) return err('Enter a valid annual CTC.');
+  if (employees.some(e => e.code === rec.code && e.code !== editing)) return err(`Code ${rec.code} is already used.`);
+  const revs = revDraft.filter(r => r.from || r.annualCtc !== '');
+  if (revs.some(r => !r.from || !(r.annualCtc > 0))) return err('Each revision needs a month and a CTC.');
+  if (revs.length) rec.revisions = revs.sort((a, b) => a.from.localeCompare(b.from)).map(r => ({ from: r.from, annualCtc: r.annualCtc }));
+  rec.designation = rec.designation || '';
+  if (editing) employees[employees.findIndex(e => e.code === editing)] = rec; else employees.push(rec);
+  refreshEmpSelect(rec.code); $('emp').value = rec.code;
+  saveEmployees(); openList();
+}
+function delEmp() {
+  const e = employees.find(x => x.code === editing);
+  if (!confirm(`Delete ${e.code} — ${e.name}? Their payslips can no longer be generated.`)) return;
+  employees = employees.filter(x => x.code !== editing);
+  saveEmployees(); openList();
+}
+function resetToFile() {
+  if (!confirm('Discard all employee changes on this device and go back to the list in the app file?')) return;
+  employees = JSON.parse(FILE_JSON);
+  try { localStorage.removeItem(LS_KEY); } catch (e) {}
+  refreshEmpSelect(); updateBanner(); buildPrev(); render(); openList();
+}
+function saveBlob(text, name, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function backupJson() {
+  const d = new Date().toISOString().slice(0, 10);
+  saveBlob(JSON.stringify(employees, null, 2), `employees-backup-${d}.json`, 'application/json');
+}
+function restoreJson(ev) {
+  const f = ev.target.files[0]; if (!f) return;
+  f.text().then(t => {
+    const arr = JSON.parse(t);
+    if (!Array.isArray(arr) || !arr.length || arr.some(e => !e.code || !e.name || !(Number(e.annualCtc) > 0))) throw new Error('bad');
+    if (!confirm(`Replace the current list with ${arr.length} employees from this backup?`)) return;
+    employees = arr; saveEmployees(); openList();
+  }).catch(() => alert('That file is not a valid employee backup.')).finally(() => { ev.target.value = ''; });
+}
+async function downloadAppFile() {
+  const A = '/*EMP_' + 'START*/', B = '/*EMP_' + 'END*/';
+  try {
+    const res = await fetch(location.href.split('#')[0].split('?')[0], { cache: 'no-store' });
+    let src = await res.text();
+    const i = src.indexOf(A), j = src.indexOf(B);
+    if (!res.ok || i < 0 || j < i) throw new Error('markers');
+    const enc = await encryptWith(KEY, JSON.stringify(employees));
+    const obj = { v: 1, iter: EMPLOYEES_ENC.iter, salt: EMPLOYEES_ENC.salt, ...enc };
+    src = src.slice(0, i + A.length) + JSON.stringify(obj) + src.slice(j);
+    saveBlob(src, 'index.html', 'text/html');
+  } catch (e) {
+    alert('Could not read the app file from here. Open the app from your GitHub Pages link and try again — or use Backup (JSON) for now.');
+  }
+}
+
+/* ===================== lock screen ===================== */
+async function start(key, json, remember) {
+  KEY = key; FILE_JSON = json;
+  if (remember) { try { localStorage.setItem(KEY_LS, b64(await crypto.subtle.exportKey('raw', key))); } catch (e) {} }
+  employees = await loadEmployees();
+  document.body.classList.remove('locked');
+  init();
+}
+function lockApp() {
+  if (!confirm('Lock the app and forget the password on this device?')) return;
+  try { localStorage.removeItem(KEY_LS); } catch (e) {}
+  location.reload();
+}
+(async function boot() {
+  $('lockLogo').src = logoSrc(); $('lockName').textContent = COMPANY.name;
+  try {
+    const saved = localStorage.getItem(KEY_LS);
+    if (saved) {
+      const key = await crypto.subtle.importKey('raw', unb64(saved), 'AES-GCM', true, ['encrypt', 'decrypt']);
+      return await start(key, await decryptWith(key, EMPLOYEES_ENC), false);
+    }
+  } catch (e) { try { localStorage.removeItem(KEY_LS); } catch (_) {} }
+  $('pw').focus();
+  $('lockForm').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const btn = $('unlockBtn'); btn.disabled = true; btn.textContent = 'Checking…'; $('lockErr').textContent = '';
+    try {
+      const key = await deriveKey($('pw').value);
+      const json = await decryptWith(key, EMPLOYEES_ENC);     // fails on a wrong password
+      await start(key, json, $('remember').checked);
+    } catch (e) {
+      $('lockErr').textContent = window.crypto && crypto.subtle ? 'Incorrect password.' : 'This browser cannot unlock the app (needs HTTPS).';
+      $('pw').select();
+    }
+    btn.disabled = false; btn.textContent = 'Unlock';
+  });
 })();
 
-// Exposed for testing in Node
-if (typeof module !== 'undefined') module.exports = { calculate, xround, inWords };
+/* ===================== init ===================== */
+function init() {
+  $('coTitle').textContent = COMPANY.name;
+  $('markImg').src = logoSrc();
+  document.title = 'Payslips · ' + COMPANY.name;
+  refreshEmpSelect(); updateBanner();
+  $('restoreFile').addEventListener('change', restoreJson);
+  const now = new Date();
+  $('month').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  $('month').addEventListener('change', () => { buildPrev(); render(); });
+  ['emp','lop','arrDays','lopr','tds','advance','esi','lwf'].forEach(id => $(id).addEventListener('input', render));
+  $('emp').addEventListener('change', () => { buildPrev(); render(); });
+  buildPrev(); render();
+  if (document.fonts) document.fonts.ready.then(fit);
+}
 </script>
 </body>
 </html>
